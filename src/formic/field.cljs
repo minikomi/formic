@@ -13,7 +13,8 @@
 (def registered-components (atom {}))
 
 (defn register-component [component-name component]
-  (swap! registered-components assoc component-name component))
+  (swap! registered-components 
+         assoc component-name component))
 
 ;; touch all
 ;; -------------------------------------------------------------
@@ -49,29 +50,32 @@
   (w/postwalk
    (fn serialize-walker [field]
      (cond
-       ;; unprepared data in atom. warn?
-       (:flex field)
+       ;;flex
+       (:flex field)  
        (:value field)
-       (:compound field)
+       ;;compound
+       (:compound field) 
        (when (:value field)
-        (assoc ((:serializer field) (:value field))
-               :compound (:compound field)))
-       (:touched field)
+         (assoc ((:serializer field) (:value field))
+                :compound (:compound field)))
+       ;; basic
+       (:touched field) 
        ((:serializer field) (:value field))
-       (map? field)
-       (not-empty (remove-regular-keys field))
-       :else
+       ;; basic clean
+       (and (map? field)
+            (:id field))
+       nil
+       :else          
        field))
    @(:state form-state)))
 
 ;; error handling
 ;; --------------------------------------------------------------
 
-(defn validate-field [validation touched value]
+(defn validate-field [{:keys [validation touched value id]}]
   (when (and touched validation)
-    (first (st/validate-single
-            value
-            validation))))
+    (when-let [v (first (st/validate-single value validation))] 
+      v)))
 
 (defn validate-compound [validation value]
   (let [untouched-removed (into {}
@@ -88,20 +92,22 @@
 (defn validate-all [form-state]
   (w/postwalk
    (fn [field]
-     (cond (:flex field)
-           (not-empty (filterv identity (:value field)))
-           (:compound field)
-           (or @(:err field)
-               (:value field))
-           (:err field)
-           @(:err field)
-           (map? field)
-           (not-empty
-            (dissoc-by-val nil?
-                           (remove-regular-keys field)))
-           :else
-           (do
-             field)))
+     (cond 
+       ;; flex
+       (:flex field)
+       (not-empty (filterv identity (:value field)))
+       ;; compound
+       (:compound field)
+       (or @(:err field)
+           (:value field))
+       ;; basic
+       (:validation field)
+       (validate-field field)
+       ;; remove basic fields from compound
+       (map? field) 
+       (not-empty
+        (dissoc-by-val nil? (not-empty (remove-regular-keys field))))
+       :else field))
    @(:state form-state)))
 
 ;; field prep
@@ -114,7 +120,7 @@
                                    defaults
                                    serializers
                                    components] 
-                            :as form-state} f path]
+                            :as   form-state} f path]
   (let [default-value
         (or (:default f)
             (get defaults (:type f))
@@ -144,12 +150,12 @@
             (get components (:type f))
             (get formic-inputs/default-components (:type f))
             formic-inputs/unknown-field)
-        validation    (:validation f)]
+        validation (:validation f)]
     (swap! state assoc-in path (merge f
-                                      {:value parsed-value
-                                       :component component
+                                      {:value      parsed-value
+                                       :component  component
                                        :serializer serializer
-                                       :touched touched}))))
+                                       :touched    touched}))))
 
 (defn prepare-field-compound [{:keys [state] :as form-state} f path]
   (let [compound-type (:compound f)

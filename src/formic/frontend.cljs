@@ -61,8 +61,6 @@
 
 (enable-console-print!)
 
-
-
 (defn formic-flex-fields-field [args]
   (fn [args]
     (let [index (:index args)
@@ -182,10 +180,7 @@
     (let [form-component (get-in @state (conj path :component))
          err (r/track (fn []
                         (let [local-state (get-in @state path)]
-                          (formic-field/validate-field 
-                           (:validation f)
-                           (:touched local-state)
-                           (:value local-state)))))
+                          (formic-field/validate-field local-state))))
          value (r/cursor state (conj path :value))
          touched (r/cursor state (conj path :touched))
          final-f (assoc f
