@@ -1,7 +1,7 @@
 (ns formic.components.inputs
   (:require [formic.util :as u]
             [formic.validation :as fv]
-            [formic.field :as field]
+            [cljs.pprint :refer [pprint]]
             [reagent.core :as r]))
 
 (defn error-label [err]
@@ -142,3 +142,8 @@
    :text       validating-textarea
    :checkboxes validating-checkboxes
    })
+
+(defn unknown-field [f]
+  [:h4 "Unknown:"
+   [:pre (with-out-str
+           (pprint f))]])
