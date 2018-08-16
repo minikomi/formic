@@ -13,30 +13,6 @@
 (def sortable-element (-> js/SortableHOC .-SortableElement))
 (def sortable-handle (-> js/SortableHOC .-SortableHandle))
 
-(defn make-sortable-element [element]
-  (let [react-sortable-element (sortable-element (r/reactify-component element))
-        sortable-element (r/adapt-react-class react-sortable-element)]
-    sortable-element))
-
-(defn make-sortable-container [container]
-  (let [react-sortable-container (sortable-container (r/reactify-component container))
-        sortable-container (r/adapt-react-class react-sortable-container)]
-    sortable-container))
-
-(defn sortable-item [item-component args]
-  [(make-sortable-element item-component)
-   args])
-
-(defn sortable-list [list-component args]
-  [(make-sortable-container list-component) args])
-
-
-(defn get-field [form-schema path]
-  (get-in (:fields form-schema) path))
-
-(defn drag-button []
-  [:a {:href "#"} [:span "::"]])
-
 (defn compound-field [{:keys [state] :as form-state} f path]
   (let [compound-schema (get-in form-state [:compound (:compound f)])
         value (get-in @state (conj path :value))
@@ -61,15 +37,20 @@
            [:h4.error
             [:strong (formic-util/format-kw id)] ": " e]])])]))
 
+(def draggable-button 
+  (r/adapt-react-class 
+   (sortable-handle
+    (fn []
+      (r/as-element
+       [:a {:href "#"} [:span "::"]])))))
+
 (defn flexible-controls [value n]
   (let [is-first (= n 0)
         is-last (= (-> value deref count dec) n)]
     [:ul.formic-flex-controls
      (when (< 1 (count @value))
        [:li.drag
-        [(r/adapt-react-class 
-          (sortable-handle
-           (fn  [] (r/as-element [drag-button]))))]]) 
+        [draggable-button]]) 
      [:li.delete
       [:a {:href "#"
            :on-click

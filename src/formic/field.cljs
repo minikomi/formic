@@ -144,8 +144,7 @@
             (get components (:type f))
             (get formic-inputs/default-components (:type f))
             formic-inputs/unknown-field)
-        validation    (:validation f)
-        ]
+        validation    (:validation f)]
     (swap! state assoc-in path (merge f
                                       {:value parsed-value
                                        :component component
