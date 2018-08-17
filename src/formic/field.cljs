@@ -61,12 +61,10 @@
        ;; basic
        (:touched field) 
        ((:serializer field) (:value field))
-       ;; basic clean
-       (and (map? field)
-            (:id field))
+       ;; untouched basic clean
+       (and (map? field) (:id field))
        nil
-       :else          
-       field))
+       :else field))
    @(:state form-state)))
 
 ;; error handling
@@ -98,8 +96,7 @@
        (not-empty (filterv identity (:value field)))
        ;; compound
        (:compound field)
-       (or @(:err field)
-           (:value field))
+       (or @(:err field) (:value field))
        ;; basic
        (:validation field)
        (validate-field field)

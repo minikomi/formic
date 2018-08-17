@@ -67,13 +67,16 @@
           {:keys [index
                   form-state
                   flexible-fields
+                  dragged
                   path]} @(:vals args)]
       [:li.formic-flex-field
        [flexible-controls flexible-fields index]
-       [field 
-        form-state 
-        (get @flexible-fields index)
-        (conj path :value index)]])))
+       (if (= index @dragged)
+         [:div {:style {:height "50px"}}]
+        [field 
+         form-state 
+         (get @flexible-fields index)
+         (conj path :value index)])])))
 
 (def sortable-reagent 
   (r/adapt-react-class
@@ -85,6 +88,7 @@
   (fn [args]
     (let [{:keys [flexible-fields
                   form-state
+                  dragged 
                   path]} @(:vals args)]
       [:ul.formic-flex-fields
        (doall
@@ -92,12 +96,12 @@
               :let [ff (get @flexible-fields index)]]
           ^{:key (:id ff)}
           [sortable-reagent
-           
            {:index index
             :id (:id ff)
             :vals (atom {:index            index
                          :form-state       form-state
-                         :flexible-fields flexible-fields
+                         :flexible-fields  flexible-fields
+                         :dragged          dragged
                          :ff               ff
                          :path             path
                          })}]))])))
@@ -108,7 +112,8 @@
           (r/reactify-component formic-flex-fields))))
 
 (defn flexible-field [{:keys [state compound] :as form-state} f path]
-  (let [next (r/atom (or (count (:value (get-in @state path))) 0))]
+  (let [next (r/atom (or (count (:value (get-in @state path))) 0))
+        dragged (r/atom nil)]
     (fn [{:keys [state compound] :as form-state} f path]
       (let [flexible-fields (r/cursor state (conj path :value)) ]
        [:fieldset.formic-flex
@@ -117,11 +122,21 @@
           (atom
            {:flexible-fields flexible-fields
             :form-state form-state
+            :dragged dragged
             :path path})
-          :useDragHandle true
-          :useWindowAsScrollContainer true
-          :onSortEnd 
+          :use-drag-handle true
+          :use-window-as-scroll-container true
+          :helper-class "dragging"
+          :get-helper-dimensions 
+          (fn [ev]
+            #js {:width (.. ev -node -offsetWidth)
+                 :height 50})
+          :on-sort-start
+          (fn [ev]
+            (reset! dragged (.. ev -index)))
+          :on-sort-end 
           (fn [ev] 
+            (reset! dragged nil)
             (let [{:keys [oldIndex newIndex]} 
                   (js->clj ev :keywordize-keys true)]
               (when-not (= oldIndex newIndex)
