@@ -160,7 +160,7 @@
                                         field-type))}
              [:span.plus "+"] (formic-util/format-kw field-type)]])]]))))
 
-(defn formic-buttons
+(defn buttons
   "Renders the buttons for a set of formic fields.
   Each button has
   - :id - id for the button
@@ -169,7 +169,7 @@
               - calls preventDefault on event
               - fn receives current form-state _atom_
   "
-  [buttons form-state]
+  [form-state buttons]
   [:div.formic-buttons
    [:ul
     (for [b buttons]
@@ -199,6 +199,7 @@
          value (r/cursor state (conj path :value))
          touched (r/cursor state (conj path :touched))
          final-f (assoc f
+                        :path path
                         :touched touched
                         :value value
                         :err err)]

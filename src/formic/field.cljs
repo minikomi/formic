@@ -13,6 +13,7 @@
 (def registered-components (atom {}))
 
 (defn register-component [component-name component]
+  (println "Registering:" component-name)
   (swap! registered-components 
          assoc component-name component))
 
@@ -63,7 +64,7 @@
        ((:serializer field) (:value field))
        ;; untouched basic clean
        (and (map? field) (:id field))
-       nil
+       (remove-regular-keys field) 
        :else field))
    @(:state form-state)))
 

@@ -1,16 +1,16 @@
 (ns formic.components.inputs
   (:require [formic.util :as u]
             [formic.validation :as fv]
-            [cljs.pprint :refer [pprint]]
+            [cljs.pprint :as pp]
             [reagent.core :as r]))
 
 (defn error-label [err]
   (when err [:h3 err]))
 
 (defn make-attrs [f]
-  (let [id (u/join-keywords (:path f))]
-    {:id id
-     :name id
+  (let [path-id (u/join-keywords (remove #{:value} (:path f)))]
+    {:id path-id
+     :name path-id
      :value @(:value f)
      :on-change
      (fn input-on-change [ev]
@@ -146,4 +146,4 @@
 (defn unknown-field [f]
   [:h4 "Unknown:"
    [:pre (with-out-str
-           (pprint f))]])
+           (prn-str f))]])
