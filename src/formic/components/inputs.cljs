@@ -2,23 +2,27 @@
   (:require [formic.util :as u]
             [formic.validation :as fv]
             [cljs.pprint :as pp]
+            [struct.core :as st]
             [reagent.core :as r]))
 
 (defn error-label [err]
   (when err [:h3 err]))
 
 (defn make-attrs [f]
-  (let [path-id (u/join-keywords (remove #{:value} (:path f)))]
-    {:id path-id
-     :name path-id
-     :value @(:value f)
-     :on-change
-     (fn input-on-change [ev]
-       (let [v (.. ev -target -value)]
-         (reset! (:value f) v)))
-     :on-blur
-     (fn input-on-blur [e]
-       (reset! (:touched f) true))}))
+  (let [path-id (u/make-path-id f)]
+    (merge
+     {:id path-id
+      :name path-id
+      :value @(:value f)
+      :on-change
+      (fn input-on-change [ev]
+        (let [v (.. ev -target -value)]
+          (reset! (:value f) v)))
+      :required (boolean ((set (:validation f)) st/required))
+      :on-blur
+      (fn input-on-blur [e]
+        (reset! (:touched f) true))}
+     (:attrs f))))
 
 (defn validating-input [f]
   (let [input-type (case (:type f)
@@ -38,7 +42,7 @@
                (make-attrs f)
                {:type input-type}
                range-attrs
-               (:field-attrs f))
+               )
         err @(:err f)]
     [:div.formic-input
      {:class (when err "error")}
@@ -54,9 +58,7 @@
     [:div.formic-textarea
      {:class (when err "error")}
      [:h5.formic-input-title (u/format-kw (:id f))]
-     [:textarea (merge
-                 (make-attrs f)
-                 (:field-attrs f))]
+     [:textarea (make-attrs f)]
      [error-label err]]))
 
 (defn validating-select [f]
@@ -67,8 +69,7 @@
       [:h5.formic-input-title (u/format-kw (:id f))]
       [:select
        (merge (make-attrs f)
-              {:value (or @(:value f) "")}
-              (:field-attrs f))
+              {:value (or @(:value f) "")})
        (doall
         (for [[v l] (:options f)]
           ^{:key v}

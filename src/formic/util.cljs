@@ -12,7 +12,7 @@
    eg. :keyword-apple-banana => Keyword Apple Banana"
   (as-> kw kw
     (name kw)
-    (s/split kw #"-")
+    (s/split kw #"[-_]")
     (map s/capitalize kw)
     (s/join " " kw)))
 
@@ -22,6 +22,9 @@
 (defn field-has-error? [f]
   (and (:touched @f)
        ( (:error @f))))
+
+(defn make-path-id [f]
+ (join-keywords (remove #{:value} (:path f))))
 
 ;; vector operations
 
