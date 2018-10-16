@@ -41,6 +41,7 @@
           :id
           :type
           :options
+          :choices
           :value
           :touched
           :validation
@@ -124,8 +125,8 @@
             (get defaults (:type f))
             (when (and (or (= (:type f) :select)
                            (= (:type f) :radios))
-                       (:options f))
-              (first (first (:options f)))))
+                       (:choices f))
+              (first (first (:choices f)))))
         raw-value
         (get-in @state path)
         parser

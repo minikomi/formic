@@ -16,25 +16,35 @@
 (defn compound-field [{:keys [state] :as form-state} f path]
   (let [compound-schema (get-in form-state [:compound (:compound f)])
         value (get-in @state (conj path :value))
-        compound-error (get-in @state (conj path :err))]
+        compound-error (get-in @state (conj path :err))
+        classes (merge
+                 (get-in form-state [:options :classes])
+                 (get-in compound-schema [:options :classes])
+                 (get-in f [:options :classes]))]
     [:fieldset.formic-compound
-     {:class (str (name (:compound f)))}
+     {:class (:compound-fieldset classes)}
      [:h4.formic-compound-title
+      {:class (:compound-title classes)}
       (or (:title f) (s/capitalize (formic-util/format-kw (:compound f))))]
      [:ul.formic-compound-fields
+      {:class (:compound-fields-list classes)}
       (doall
        (for [cf (:fields compound-schema)]
          ^{:key [(:id cf)]}
          [:li
+          {:class (:compound-fields-item classes)}
           [field form-state
            (assoc cf :_key (:_key f))
            (conj path :value (:id cf))]]))]
      (when @compound-error
        [:ul.compound-errors
+        {:class (:compound-errors-list classes)}
         (for [[id e] @compound-error]
           ^{:key id}
           [:li
+           {:class (:compound-errors-item classes)}
            [:h4.error
+            {:class (:compound-error classes)}
             [:strong (formic-util/format-kw id)] ": " e]])])]))
 
 (def draggable-button 
@@ -193,19 +203,20 @@
 (defn basic-field [{:keys [state] :as form-state} f path]
   (fn [{:keys [state] :as form-state} f path]
     (let [form-component (get-in @state (conj path :component))
-         err (r/track (fn []
-                        (let [local-state (get-in @state path)]
-                          (formic-field/validate-field local-state))))
-         value (r/cursor state (conj path :value))
-         touched (r/cursor state (conj path :touched))
-         final-f (assoc f
-                        :path path
-                        :touched touched
-                        :value value
-                        :err err)]
-    
-     [:div
-      [form-component final-f]])))
+          err (r/track (fn []
+                         (let [local-state (get-in @state path)]
+                           (formic-field/validate-field local-state))))
+          value (r/cursor state (conj path :value))
+          touched (r/cursor state (conj path :touched))
+          classes (or (get-in form-state [:options :classes :basic-inputs (:type f)])
+                      (get-in f [:options :classes]))
+          final-f (assoc f
+                         :path path
+                         :touched touched
+                         :value value
+                         :classes classes
+                         :err err)]
+      [form-component final-f])))
 
 (defn field [form-state f path]
   (fn [form-state f path]

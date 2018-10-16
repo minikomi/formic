@@ -29,6 +29,7 @@
                      :email "email"
                      :number "number"
                      :range "range"
+                     :checkbox "checkbox"
                      "text")
         range-attrs (when (= input-type "range")
                       {:step (cond
@@ -38,19 +39,24 @@
                        :min (:min f)
                        :max (:max f)})
         title-str (u/format-kw (:id f))
-        attrs (merge
-               (make-attrs f)
-               {:type input-type}
-               range-attrs
-               )
-        err @(:err f)]
+        classes (:classes f)
+        err @(:err f)
+        input-attrs (merge
+                     (make-attrs f)
+                     {:type input-type}
+                     {:class (if err (:err-input classes) (:input classes))}
+                     range-attrs)
+        ]
     [:div.formic-input
-     {:class (when err "error")}
      [:label
-      [:h5.formic-input-title title-str]
-      [:input attrs]]
+      [:h5.formic-input-title
+       {:class (:title classes)}
+       title-str]
+      [:input input-attrs]]
      (when (= input-type "range")
-       [:h6.formic-range-value @(:value f)])
+       [:h6.formic-range-value
+        {:class (:range-value classes)}
+        @(:value f)])
      [error-label err]]))
 
 (defn validating-textarea [f]
@@ -71,7 +77,7 @@
        (merge (make-attrs f)
               {:value (or @(:value f) "")})
        (doall
-        (for [[v l] (:options f)]
+        (for [[v l] (:choices f)]
           ^{:key v}
           [:option
            {:value v
@@ -85,7 +91,7 @@
      [:h5.formic-input-title (u/format-kw (:id f))]
      [:ul (:field-attrs f {})
       (doall
-       (for [[v l] (:options f)
+       (for [[v l] (:choices f)
              :let  [formic-radio-on-change
                     (fn formic-radio-on-change [e]
                       (reset! (:value f) v))
@@ -114,7 +120,7 @@
      [:h5.formic-input-title (u/format-kw (:id f))]
      [:ul
       (doall
-       (for [[v l] (:options f)
+       (for [[v l] (:choices f)
              :let [formic-checkbox-on-change
                    (fn formic-checkbox-on-change [_]
                      (swap! (:value f) u/toggle v))
@@ -138,6 +144,7 @@
    :email      validating-input
    :number     validating-input
    :range      validating-input
+   :checkbox   validating-input
    :select     validating-select
    :radios     radio-select
    :text       validating-textarea
