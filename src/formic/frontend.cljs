@@ -2,20 +2,17 @@
   (:require [formic.components.inputs :as formic-inputs]
             [formic.util :as formic-util]
             [formic.field :as formic-field]
-            [cljsjs.react-sortable-hoc]
+
             [reagent.core :as r]
             [cljs.pprint :refer [pprint]]
             [clojure.string :as s]))
 
 (declare field)
 
-(def sortable-container (-> js/SortableHOC .-SortableContainer))
-(def sortable-element (-> js/SortableHOC .-SortableElement))
-(def sortable-handle (-> js/SortableHOC .-SortableHandle))
+(def flip-move (r/adapt-react-class js/FlipMove))
 
 (defn compound-field [{:keys [state] :as form-state} f path]
   (let [compound-schema (get-in form-state [:compound (:compound f)])
-        value (get-in @state (conj path :value))
         compound-error (get-in @state (conj path :err))
         classes (merge
                  (get-in form-state [:options :classes])
@@ -47,20 +44,31 @@
             {:class (:compound-error classes)}
             [:strong (formic-util/format-kw id)] ": " e]])])]))
 
-(def draggable-button 
-  (r/adapt-react-class 
-   (sortable-handle
-    (fn []
-      (r/as-element
-       [:a {:href "#"} [:span "::"]])))))
-
 (defn flexible-controls [value n]
   (let [is-first (= n 0)
         is-last (= (-> value deref count dec) n)]
     [:ul.formic-flex-controls
-     (when (< 1 (count @value))
-       [:li.drag
-        [draggable-button]]) 
+     [:li.up.move
+      {:class (when (or (= 1 (count @value))
+                        (= 0 n))
+                "disabled")}
+      [:a {:href "#"
+           :on-click
+           (fn [ev]
+             (.preventDefault ev)
+             (when (and (< 0 (count @value)) (< 0 n))
+               (swap! value formic-util/vswap (dec n) n)))}
+       "↑"]]
+     [:li.down.move
+      {:class (when (= n (dec (count @value)))
+                "disabled")}
+      [:a {:href "#"
+           :on-click
+           (fn [ev]
+             (.preventDefault ev)
+             (when (not= n (dec (count @value)))
+               (swap! value formic-util/vswap n (inc n))))}
+       "↓"]]
      [:li.delete
       [:a {:href "#"
            :on-click
@@ -69,97 +77,50 @@
              (swap! value formic-util/vremove n))}
        "✗"]]]))
 
-(enable-console-print!)
+(defn formic-flex-fields-field [form-state flexible-fields path f index]
+  (fn [form-state flexible-fields path f index]
+    [:li.formic-flex-field
+     [flexible-controls flexible-fields index]
+     [field form-state (get @flexible-fields index) (conj path :value index)]]))
 
-(defn formic-flex-fields-field [args]
-  (fn [args]
-    (let [index (:index args)
-          {:keys [index
-                  form-state
-                  flexible-fields
-                  dragged
-                  path]} @(:vals args)]
-      [:li.formic-flex-field
-       [flexible-controls flexible-fields index]
-       (if (= index @dragged)
-         [:div {:style {:height "50px"}}]
-        [field 
-         form-state 
-         (get @flexible-fields index)
-         (conj path :value index)])])))
-
-(def sortable-reagent 
-  (r/adapt-react-class
-   (sortable-element (r/reactify-component 
-                      formic-flex-fields-field))))
-
-
-(defn formic-flex-fields [args]
-  (fn [args]
-    (let [{:keys [flexible-fields
-                  form-state
-                  dragged 
-                  path]} @(:vals args)]
-      [:ul.formic-flex-fields
-       (doall
-        (for [index (range (count @flexible-fields))
-              :let [ff (get @flexible-fields index)]]
-          ^{:key (:id ff)}
-          [sortable-reagent
-           {:index index
-            :id (:id ff)
-            :vals (atom {:index            index
-                         :form-state       form-state
-                         :flexible-fields  flexible-fields
-                         :dragged          dragged
-                         :ff               ff
-                         :path             path
-                         })}]))])))
-
-(def container-reagent
-  (r/adapt-react-class 
-         (sortable-container
-          (r/reactify-component formic-flex-fields))))
+(defn formic-flex-fields [form-state flexible-fields path]
+  (fn [form-state flexible-fields path]
+    [:ul.formic-flex-fields
+     [flip-move
+      (doall
+       (for [index (range (count @flexible-fields))
+             :let [ff (get @flexible-fields index)]]
+         ^{:key (:id ff)}
+         [formic-flex-fields-field
+          form-state
+          flexible-fields
+          path
+          ff
+          index]))]]))
 
 (defn flexible-field [{:keys [state compound] :as form-state} f path]
   (let [next (r/atom (or (count (:value (get-in @state path))) 0))
-        dragged (r/atom nil)]
+        dragged (r/atom nil)
+        classes (merge
+                 (get-in form-state [:options :classes])
+                 (get-in f [:options :classes]))]
     (fn [{:keys [state compound] :as form-state} f path]
       (let [flexible-fields (r/cursor state (conj path :value)) ]
        [:fieldset.formic-flex
-        [container-reagent
-         {:vals
-          (atom
-           {:flexible-fields flexible-fields
-            :form-state form-state
-            :dragged dragged
-            :path path})
-          :use-drag-handle true
-          :use-window-as-scroll-container true
-          :helper-class "dragging"
-          :get-helper-dimensions 
-          (fn [ev]
-            #js {:width (.. ev -node -offsetWidth)
-                 :height 50})
-          :on-sort-start
-          (fn [ev]
-            (reset! dragged (.. ev -index)))
-          :on-sort-end 
-          (fn [ev] 
-            (reset! dragged nil)
-            (let [{:keys [oldIndex newIndex]} 
-                  (js->clj ev :keywordize-keys true)]
-              (when-not (= oldIndex newIndex)
-                (swap! flexible-fields
-                       formic-util/vmove
-                       oldIndex 
-                       newIndex))))}]
+        {:class (:flex-fieldset classes)}
+        [:h4.formic-compound-title
+         {:class (:flex-title classes)}
+         (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
+        [formic-flex-fields form-state flexible-fields path]
         [:ul.formic-flex-add
+         {:class (:flex-add-list classes)}
          (for [field-type (:flex f)]
            ^{:key field-type}
            [:li
+            {:class (:flex-add-item classes)}
             [:a.button
-             {:href "#"
+             {:class (:flex-add-button classes)
+              :href "#"
               :on-click 
               (fn [ev]
                 (.preventDefault ev)
@@ -201,22 +162,21 @@
            (pprint f))]])
 
 (defn basic-field [{:keys [state] :as form-state} f path]
-  (fn [{:keys [state] :as form-state} f path]
-    (let [form-component (get-in @state (conj path :component))
-          err (r/track (fn []
-                         (let [local-state (get-in @state path)]
-                           (formic-field/validate-field local-state))))
-          value (r/cursor state (conj path :value))
-          touched (r/cursor state (conj path :touched))
-          classes (or (get-in form-state [:options :classes :basic-inputs (:type f)])
-                      (get-in f [:options :classes]))
-          final-f (assoc f
-                         :path path
-                         :touched touched
-                         :value value
-                         :classes classes
-                         :err err)]
-      [form-component final-f])))
+  (let [form-component (get-in @state (conj path :component))
+        err (r/track (fn []
+                       (let [local-state (get-in @state path)]
+                         (formic-field/validate-field local-state))))
+        value (r/cursor state (conj path :value))
+        touched (r/cursor state (conj path :touched))
+        classes (or (get-in form-state [:options :classes :basic-inputs (:type f)])
+                    (get-in f [:options :classes]))
+        final-f (assoc f
+                       :path path
+                       :touched touched
+                       :value value
+                       :classes classes
+                       :err err)]
+    (when form-component [form-component final-f])))
 
 (defn field [form-state f path]
   (fn [form-state f path]

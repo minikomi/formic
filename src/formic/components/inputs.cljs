@@ -5,8 +5,8 @@
             [struct.core :as st]
             [reagent.core :as r]))
 
-(defn error-label [err]
-  (when err [:h3 err]))
+(defn error-label [f err]
+  (when err [:h3 {:class (get-in f [:classes :err-label])} err]))
 
 (defn make-attrs [f]
   (let [path-id (u/make-path-id f)]
@@ -45,8 +45,7 @@
                      (make-attrs f)
                      {:type input-type}
                      {:class (if err (:err-input classes) (:input classes))}
-                     range-attrs)
-        ]
+                     range-attrs)]
     [:div.formic-input
      [:label
       [:h5.formic-input-title
@@ -57,7 +56,7 @@
        [:h6.formic-range-value
         {:class (:range-value classes)}
         @(:value f)])
-     [error-label err]]))
+     [error-label f err]]))
 
 (defn validating-textarea [f]
   (let [err @(:err f)]
@@ -65,15 +64,18 @@
      {:class (when err "error")}
      [:h5.formic-input-title (u/format-kw (:id f))]
      [:textarea (make-attrs f)]
-     [error-label err]]))
+     [error-label f err]]))
 
 (defn validating-select [f]
-  (let [err @(:err f)]
+  (let [err @(:err f)
+        classes (:classes f)]
     [:div.formic-select
-     {:class (when err "error")}
      [:label
-      [:h5.formic-input-title (u/format-kw (:id f))]
+      [:h5.formic-input-title
+       {:class (:title classes)}
+       (u/format-kw (:id f))]
       [:select
+       {:class (:input classes)}
        (merge (make-attrs f)
               {:value (or @(:value f) "")})
        (doall
@@ -82,14 +84,18 @@
           [:option
            {:value v
             :disabled (get (:disabled f) v false)} l]))]]
-     [error-label err]]))
+     [error-label f err]]))
 
 (defn radio-select [f]
-  (let [err @(:err f)]
+  (let [err @(:err f)
+        classes (:classes f)]
     [:div.formic-select
      {:class (when err "error")}
-     [:h5.formic-input-title (u/format-kw (:id f))]
+     [:h5.formic-input-title
+       {:class (:title classes)}
+      (u/format-kw (:id f))]
      [:ul (:field-attrs f {})
+      {:class (:list classes)}
       (doall
        (for [[v l] (:choices f)
              :let  [formic-radio-on-change
@@ -102,6 +108,8 @@
                     (= @(:value f) v)
                     input-attrs
                     {:type      "radio"
+                     :class     (:input classes)
+                     :name      (name (:id f))
                      :id        (str (name (:id f)) "-" v)
                      :on-change formic-radio-on-change
                      :on-click  formic-radio-on-click
@@ -109,16 +117,24 @@
                      :value     (if (keyword? v) (name v) v)}]]
          ^{:key v}
          [:li
-          [:label [:input input-attrs] l]]))]
-     [error-label err]]))
+          {:class (:item classes)}
+          [:label
+           {:class (:label classes)}
+           [:input input-attrs] l]]))]
+     [error-label f err]]))
 
 (defn validating-checkboxes [f]
   (let [err @(:err f)
+        classes (:classes f)
         value (or @(:value f) #{})]
     [:div.formic-checkboxes
-     {:class (when err "error")}
-     [:h5.formic-input-title (u/format-kw (:id f))]
+     {:id (u/make-path-id f)
+      :class (when err "error")}
+     [:h5.formic-input-title
+      {:class (:title classes)}
+      (u/format-kw (:id f))]
      [:ul
+      {:class (:list classes)}
       (doall
        (for [[v l] (:choices f)
              :let [formic-checkbox-on-change
@@ -130,14 +146,24 @@
                    is-selected (value v)
                    input-attrs
                    {:type "checkbox"
+                    :class (conj
+                            (if is-selected
+                              (:active-input classes)
+                              (:input classes))
+                            v)
                     :name (:id f)
                     :on-change formic-checkbox-on-change
                     :on-click formic-checkbox-on-click
                     :checked (if is-selected "1" "")
                     :value v}]]
          ^{:key v}
-         [:li [:label [:input input-attrs] l]]))]
-     [error-label err]]))
+         [:li
+          {:class (:item classes)}
+          [:label
+           {:class (conj (:label classes) v)}
+           [:input
+            input-attrs] l]]))]
+     [error-label f err]]))
 
 (def default-components
   {:string     validating-input

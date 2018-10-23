@@ -7,7 +7,7 @@
                             [adzerk/boot-test "RELEASE" :scope "test"]
                             [com.andrewmcveigh/cljs-time "0.5.2"]
                             [cljs-ajax "0.7.3"]
-                            [cljsjs/react-sortable-hoc "0.8.2-0"]
+                            [cljsjs/react-flip-move "3.0.1-1"]
                             [garden "1.3.5"]
                             [adzerk/bootlaces "0.1.13"]
                             [reagent "0.8.0"]
