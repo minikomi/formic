@@ -44,7 +44,10 @@
         input-attrs (merge
                      (make-attrs f)
                      {:type input-type}
-                     {:class (if err (:err-input classes) (:input classes))}
+                     {:class (if err
+                               (into [:error]
+                                     (:err-input classes))
+                               (:input classes))}
                      range-attrs)]
     [:div.formic-input
      [:label
@@ -146,11 +149,10 @@
                    is-selected (value v)
                    input-attrs
                    {:type "checkbox"
-                    :class (conj
+                    :class ((fnil conj [])
                             (if is-selected
                               (:active-input classes)
-                              (:input classes))
-                            v)
+                              (:input classes)) v)
                     :name (:id f)
                     :on-change formic-checkbox-on-change
                     :on-click formic-checkbox-on-click
@@ -161,8 +163,7 @@
           {:class (:item classes)}
           [:label
            {:class (conj (:label classes) v)}
-           [:input
-            input-attrs] l]]))]
+           [:input input-attrs] l]]))]
      [error-label f err]]))
 
 (def default-components

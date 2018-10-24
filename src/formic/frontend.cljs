@@ -2,7 +2,7 @@
   (:require [formic.components.inputs :as formic-inputs]
             [formic.util :as formic-util]
             [formic.field :as formic-field]
-
+            [goog.dom :as gdom]
             [reagent.core :as r]
             [cljs.pprint :refer [pprint]]
             [clojure.string :as s]))
@@ -10,6 +10,7 @@
 (declare field)
 
 (def flip-move (r/adapt-react-class js/FlipMove))
+
 
 (defn compound-field [{:keys [state] :as form-state} f path]
   (let [compound-schema (get-in form-state [:compound (:compound f)])
@@ -186,18 +187,19 @@
                        :value value
                        :classes classes
                        :err err)]
-    (when form-component [form-component final-f])))
+      [:div.formic-field
+       {:class (when @err "formic-error")}
+       (when form-component [form-component final-f])]))
 
 (defn field [form-state f path]
   (fn [form-state f path]
-    [:div.formic-field
     (cond
       (:flex f)
       [flexible-field form-state f path]
       (:compound f)
       [compound-field form-state f path]
       :else
-      [basic-field form-state f path])]))
+      [basic-field form-state f path])))
 
 (defn fields [form-state]
   [:div.formic-fields
@@ -205,3 +207,10 @@
          :let [f (get (:fields form-state) n)]]
      ^{:key n}
      [field form-state f [(:id f)]])])
+
+(defn focus-error []
+  (let [first-err-el (gdom/getElementByClass "formic-error")]
+    (.scrollIntoView first-err-el true)
+    (when-let [first-err-input 
+               (gdom/getElementByTagNameAndClass "input" "error")]
+      (.focus first-err-input))))
