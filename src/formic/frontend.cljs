@@ -15,50 +15,50 @@
   (let [compound-schema (get-in form-state [:compound (:compound f)])
         compound-error (get-in @state (conj path :err))
         classes (merge
-                 (get-in form-state [:options :classes])
+                 (get-in form-state [:options :classes :compound])
                  (get-in compound-schema [:options :classes])
                  (get-in f [:options :classes]))]
     [:fieldset.formic-compound
-     {:class (:compound-fieldset classes)}
+     {:class (:fieldset classes)}
      [:h4.formic-compound-title
-      {:class (:compound-title classes)}
+      {:class (:title classes)}
       (or (:title f) (s/capitalize (formic-util/format-kw (:compound f))))]
      [:ul.formic-compound-fields
-      {:class (:compound-fields-list classes)}
+      {:class (:fields-list classes)}
       (doall
        (for [cf (:fields compound-schema)]
          ^{:key [(:id cf)]}
          [:li
-          {:class (:compound-fields-item classes)}
+          {:class (:fields-item classes)}
           [field form-state
            (assoc cf :_key (:_key f))
            (conj path :value (:id cf))]]))]
      (when @compound-error
        [:ul.compound-errors
-        {:class (:compound-errors-list classes)}
+        {:class (:errors-list classes)}
         (for [[id e] @compound-error]
           ^{:key id}
           [:li
-           {:class (:compound-errors-item classes)}
+           {:class (:errors-item classes)}
            [:h4.error
-            {:class (:compound-error classes)}
+            {:class (:error classes)}
             [:strong (formic-util/format-kw id)] ": " e]])])]))
 
 (defn flexible-controls [classes flexible-fields n]
   (let [is-first (= n 0)
         is-last (= (-> flexible-fields deref count dec) n)]
     [:ul.formic-flex-controls
-     {:class (:flex-controls classes)}
+     {:class (:controls classes)}
      (let [is-disabled (or (= 1 (count @flexible-fields)) (= 0 n))]
       [:li.up.move
        {:class (if is-disabled
-                 (:flex-controls-move-disabled classes)
-                 (:flex-controls-move classes)
+                 (:controls-move-disabled classes)
+                 (:controls-move classes)
                  )}
        [:a
         {:class (if is-disabled
-                 (:flex-controls-move-button-disabled classes)
-                 (:flex-controls-move-button classes))
+                 (:controls-move-button-disabled classes)
+                 (:controls-move-button classes))
          :href "#"
          :on-click
          (fn [ev]
@@ -69,12 +69,12 @@
      (let [is-disabled (= n (dec (count @flexible-fields)))]
        [:li.down.move
         {:class (if is-disabled
-                  (:flex-controls-move-disabled classes)
-                  (:flex-controls-move classes))}
+                  (:controls-move-disabled classes)
+                  (:controls-move classes))}
         [:a
          {:class (if is-disabled
-                  (:flex-controls-move-button-disabled classes)
-                  (:flex-controls-move-button classes))
+                  (:controls-move-button-disabled classes)
+                  (:controls-move-button classes))
           :href "#"
           :on-click
           (fn [ev]
@@ -83,9 +83,9 @@
               (swap! flexible-fields formic-util/vswap n (inc n))))}
          "↓"]])
      [:li.delete
-      {:class (:flex-controls-delete classes)}
+      {:class (:controls-delete classes)}
       [:a
-       {:class (:flex-controls-delete-button classes)
+       {:class (:controls-delete-button classes)
         :href "#"
         :on-click
         (fn [ev]
@@ -95,7 +95,7 @@
 
 (defn formic-flex-fields [form-state classes flexible-fields path]
   [:ul.formic-flex-fields
-   {:class (:flex-fields-list classes)}
+   {:class (:fields-list classes)}
    [flip-move
     {:duration 200
      :leave-animation false
@@ -105,32 +105,32 @@
            :let [ff (get @flexible-fields index)]]
        ^{:key (:id ff)}
        [:li.formic-flex-field
-        {:class (:flex-fields-item classes)}
-        [flexible-controls classes flexible-fields index]
+        {:class (:fields-item classes)}
+        [flexible-controls (:controls classes) flexible-fields index]
         [field form-state ff (conj path :value index)]]))]])
 
 (defn flexible-field [{:keys [state compound] :as form-state} f path]
   (let [next (r/atom (or (count (:value (get-in @state path))) 0))
         dragged (r/atom nil)
         classes (merge
-                 (get-in form-state [:options :classes])
+                 (get-in form-state [:options :classes :flex])
                  (get-in f [:options :classes]))]
     (fn [{:keys [state compound] :as form-state} f path]
       (let [flexible-fields (r/cursor state (conj path :value)) ]
        [:fieldset.formic-flex
-        {:class (:flex-fieldset classes)}
+        {:class (:fieldset classes)}
         [:h4.formic-compound-title
-         {:class (:flex-title classes)}
+         {:class (:title classes)}
          (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
         [formic-flex-fields form-state classes flexible-fields path]
         [:ul.formic-flex-add
-         {:class (:flex-add-list classes)}
+         {:class (:add-list classes)}
          (for [field-type (:flex f)]
            ^{:key field-type}
            [:li
-            {:class (:flex-add-item classes)}
+            {:class (:add-item classes)}
             [:a.button
-             {:class (:flex-add-button classes)
+             {:class (:add-button classes)
               :href "#"
               :on-click 
               (fn [ev]
@@ -179,7 +179,7 @@
                          (formic-field/validate-field local-state))))
         value (r/cursor state (conj path :value))
         touched (r/cursor state (conj path :touched))
-        classes (or (get-in form-state [:options :classes :basic-inputs (:type f)])
+        classes (or (get-in form-state [:options :classes :fields (:type f)])
                     (get-in f [:options :classes]))
         final-f (assoc f
                        :path path
