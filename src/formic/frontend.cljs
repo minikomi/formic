@@ -77,26 +77,19 @@
              (swap! value formic-util/vremove n))}
        "✗"]]]))
 
-(defn formic-flex-fields-field [form-state flexible-fields path f index]
-  (fn [form-state flexible-fields path f index]
-    [:li.formic-flex-field
-     [flexible-controls flexible-fields index]
-     [field form-state (get @flexible-fields index) (conj path :value index)]]))
-
 (defn formic-flex-fields [form-state flexible-fields path]
   (fn [form-state flexible-fields path]
     [:ul.formic-flex-fields
      [flip-move
+      {:leave-animation false
+       :enter-animation "fade"}
       (doall
        (for [index (range (count @flexible-fields))
              :let [ff (get @flexible-fields index)]]
          ^{:key (:id ff)}
-         [formic-flex-fields-field
-          form-state
-          flexible-fields
-          path
-          ff
-          index]))]]))
+         [:li.formic-flex-field
+          [flexible-controls flexible-fields index]
+          [field form-state ff (conj path :value index)]]))]]))
 
 (defn flexible-field [{:keys [state compound] :as form-state} f path]
   (let [next (r/atom (or (count (:value (get-in @state path))) 0))
