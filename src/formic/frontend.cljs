@@ -47,18 +47,17 @@
 (defn flexible-controls [classes flexible-fields n]
   (let [is-first (= n 0)
         is-last (= (-> flexible-fields deref count dec) n)]
-    [:ul.formic-flex-controls
-     {:class (:controls classes)}
+    [:ul.formic-flex-controls-wrapper
+     {:class (:wrapper classes)}
      (let [is-disabled (or (= 1 (count @flexible-fields)) (= 0 n))]
       [:li.up.move
        {:class (if is-disabled
-                 (:controls-move-disabled classes)
-                 (:controls-move classes)
-                 )}
+                 (:move-disabled classes)
+                 (:move classes))}
        [:a
         {:class (if is-disabled
-                 (:controls-move-button-disabled classes)
-                 (:controls-move-button classes))
+                 (:move-button-disabled classes)
+                 (:move-button classes))
          :href "#"
          :on-click
          (fn [ev]
@@ -69,12 +68,12 @@
      (let [is-disabled (= n (dec (count @flexible-fields)))]
        [:li.down.move
         {:class (if is-disabled
-                  (:controls-move-disabled classes)
-                  (:controls-move classes))}
+                  (:move-disabled classes)
+                  (:move classes))}
         [:a
          {:class (if is-disabled
-                  (:controls-move-button-disabled classes)
-                  (:controls-move-button classes))
+                  (:move-button-disabled classes)
+                  (:move-button classes))
           :href "#"
           :on-click
           (fn [ev]
@@ -83,9 +82,9 @@
               (swap! flexible-fields formic-util/vswap n (inc n))))}
          "↓"]])
      [:li.delete
-      {:class (:controls-delete classes)}
+      {:class (:delete classes)}
       [:a
-       {:class (:controls-delete-button classes)
+       {:class (:delete-button classes)
         :href "#"
         :on-click
         (fn [ev]
