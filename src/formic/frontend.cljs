@@ -44,52 +44,70 @@
             {:class (:compound-error classes)}
             [:strong (formic-util/format-kw id)] ": " e]])])]))
 
-(defn flexible-controls [value n]
+(defn flexible-controls [classes flexible-fields n]
   (let [is-first (= n 0)
-        is-last (= (-> value deref count dec) n)]
+        is-last (= (-> flexible-fields deref count dec) n)]
     [:ul.formic-flex-controls
-     [:li.up.move
-      {:class (when (or (= 1 (count @value))
-                        (= 0 n))
-                "disabled")}
-      [:a {:href "#"
-           :on-click
-           (fn [ev]
-             (.preventDefault ev)
-             (when (and (< 0 (count @value)) (< 0 n))
-               (swap! value formic-util/vswap (dec n) n)))}
-       "↑"]]
-     [:li.down.move
-      {:class (when (= n (dec (count @value)))
-                "disabled")}
-      [:a {:href "#"
-           :on-click
-           (fn [ev]
-             (.preventDefault ev)
-             (when (not= n (dec (count @value)))
-               (swap! value formic-util/vswap n (inc n))))}
-       "↓"]]
+     {:class (:flex-controls classes)}
+     (let [is-disabled (or (= 1 (count @flexible-fields)) (= 0 n))]
+      [:li.up.move
+       {:class (if is-disabled
+                 (:flex-controls-move-disabled classes)
+                 (:flex-controls-move classes)
+                 )}
+       [:a
+        {:class (if is-disabled
+                 (:flex-controls-move-button-disabled classes)
+                 (:flex-controls-move-button classes))
+         :href "#"
+         :on-click
+         (fn [ev]
+           (.preventDefault ev)
+           (when (and (< 0 (count @flexible-fields)) (< 0 n))
+             (swap! flexible-fields formic-util/vswap (dec n) n)))}
+        "↑"]])
+     (let [is-disabled (= n (dec (count @flexible-fields)))]
+       [:li.down.move
+        {:class (if is-disabled
+                  (:flex-controls-move-disabled classes)
+                  (:flex-controls-move classes))}
+        [:a
+         {:class (if is-disabled
+                  (:flex-controls-move-button-disabled classes)
+                  (:flex-controls-move-button classes))
+          :href "#"
+          :on-click
+          (fn [ev]
+            (.preventDefault ev)
+            (when (not= n (dec (count @flexible-fields)))
+              (swap! flexible-fields formic-util/vswap n (inc n))))}
+         "↓"]])
      [:li.delete
-      [:a {:href "#"
-           :on-click
-           (fn [ev]
-             (.preventDefault ev)
-             (swap! value formic-util/vremove n))}
+      {:class (:flex-controls-delete classes)}
+      [:a
+       {:class (:flex-controls-delete-button classes)
+        :href "#"
+        :on-click
+        (fn [ev]
+          (.preventDefault ev)
+          (swap! flexible-fields formic-util/vremove n))}
        "✗"]]]))
 
-(defn formic-flex-fields [form-state flexible-fields path]
-  (fn [form-state flexible-fields path]
-    [:ul.formic-flex-fields
-     [flip-move
-      {:leave-animation false
-       :enter-animation "fade"}
-      (doall
-       (for [index (range (count @flexible-fields))
-             :let [ff (get @flexible-fields index)]]
-         ^{:key (:id ff)}
-         [:li.formic-flex-field
-          [flexible-controls flexible-fields index]
-          [field form-state ff (conj path :value index)]]))]]))
+(defn formic-flex-fields [form-state classes flexible-fields path]
+  [:ul.formic-flex-fields
+   {:class (:flex-fields-list classes)}
+   [flip-move
+    {:duration 200
+     :leave-animation false
+     :enter-animation "fade"}
+    (doall
+     (for [index (range (count @flexible-fields))
+           :let [ff (get @flexible-fields index)]]
+       ^{:key (:id ff)}
+       [:li.formic-flex-field
+        {:class (:flex-fields-item classes)}
+        [flexible-controls classes flexible-fields index]
+        [field form-state ff (conj path :value index)]]))]])
 
 (defn flexible-field [{:keys [state compound] :as form-state} f path]
   (let [next (r/atom (or (count (:value (get-in @state path))) 0))
@@ -104,7 +122,7 @@
         [:h4.formic-compound-title
          {:class (:flex-title classes)}
          (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
-        [formic-flex-fields form-state flexible-fields path]
+        [formic-flex-fields form-state classes flexible-fields path]
         [:ul.formic-flex-add
          {:class (:flex-add-list classes)}
          (for [field-type (:flex f)]
