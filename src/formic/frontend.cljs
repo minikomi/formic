@@ -201,17 +201,22 @@
   "
   [form-state buttons]
   [:div.formic-buttons
-   [:ul
+   [:ul.formic-buttons
+    {:class (get-in form-state [:options :classes :buttons :list])}
     (for [b buttons]
       (when b
-        (let [id (formic-util/format-kw (:id b))]
-          ^{:key b}
-          [:li
-           [:button.formic-buttons-button
-            {:name     id
-             :id       id
-             :class    (:class b)
-             :on-click (fn [ev]
-                         (.preventDefault ev)
-                         ((:on-click b) form-state))}
-            (or (:label b) (s/capitalize id))]])))]])
+        ^{:key b}
+        [:li.formic-button
+         {:class (get-in form-state [:options :classes :buttons :item])}
+         [:a.formic-buttons-button
+          {:name     (:id b)
+           :href "#"
+           :id       (:id b)
+           :class    (get-in form-state [:options :classes :buttons :button (:id b)])
+           :on-click (fn [ev]
+                       (.preventDefault ev)
+                       ((:on-click b) form-state))}
+          (or (:label b) (s/capitalize
+
+                          (formic-util/format-kw (:id b))
+                          ))]]))]])

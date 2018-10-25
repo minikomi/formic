@@ -1,7 +1,7 @@
 (ns formic.server
   (:require [struct.core :as st]))
 
-(defn -validate-value-path [acc form-schema values f path]
+(defn ^:private -validate-value-path [acc form-schema values f path]
   (let [v (get-in values path)
         validation (:validation f)
         compound-fields (get-in form-schema [:compound])]

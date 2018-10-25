@@ -35,19 +35,6 @@
 ;; serialization
 ;; --------------------------------------------------------------
 
-(defn remove-regular-keys [field]
-  (dissoc field
-          :serializer
-          :id
-          :type
-          :options
-          :choices
-          :value
-          :touched
-          :validation
-          :err
-          :component))
-
 (defn serialize [form-state]
   (w/postwalk
    (fn serialize-walker [field]
@@ -61,11 +48,12 @@
          (assoc ((:serializer field) (:value field))
                 :compound (:compound field)))
        ;; basic
-       (:touched field) 
-       ((:serializer field) (:value field))
+       (contains? field :touched)
+       (when (:value field)
+         (:serializer field) (:value field))
        ;; untouched basic clean
-       (and (map? field) (:id field))
-       (remove-regular-keys field) 
+       (contains? field :compound)
+       (dissoc field :compound)
        :else field))
    @(:state form-state)))
 
@@ -88,6 +76,19 @@
 
 (defn dissoc-by-val [pred m]
   (into {} (filter (fn [[k v]] (not (pred v)))) m))
+
+(defn remove-regular-keys [field]
+  (dissoc field
+          :serializer
+          :id
+          :type
+          :options
+          :choices
+          :value
+          :touched
+          :validation
+          :err
+          :component))
 
 (defn validate-all [form-state]
   (w/postwalk
