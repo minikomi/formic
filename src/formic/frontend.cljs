@@ -142,31 +142,6 @@
                                         field-type))}
              [:span.plus "+"] (formic-util/format-kw field-type)]])]]))))
 
-(defn buttons
-  "Renders the buttons for a set of formic fields.
-  Each button has
-  - :id - id for the button
-  - :label - label for the button (optional - defaults to formatted id)
-  - :on-click - Action to perform on click.
-              - calls preventDefault on event
-              - fn receives current form-state _atom_
-  "
-  [form-state buttons]
-  [:div.formic-buttons
-   [:ul
-    (for [b buttons]
-      (when b
-        (let [id (formic-util/format-kw (:id b))]
-          ^{:key b}
-          [:li
-           [:button.formic-buttons-button
-            {:name     id
-             :id       id
-             :on-click (fn [ev]
-                         (.preventDefault ev)
-                         ((:on-click b) form-state))}
-            (or (:label b) (s/capitalize id))]])))]])
-
 (defn unknown-field [f]
   [:h4 "Unknown:"
    [:pre (with-out-str
@@ -214,3 +189,29 @@
     (when-let [first-err-input 
                (gdom/getElementByTagNameAndClass "input" "error")]
       (.focus first-err-input))))
+
+(defn buttons
+  "Renders the buttons for a set of formic fields.
+  Each button has
+  - :id - id for the button
+  - :label - label for the button (optional - defaults to formatted id)
+  - :on-click - Action to perform on click.
+              - calls preventDefault on event
+              - fn receives current form-state _atom_
+  "
+  [form-state buttons]
+  [:div.formic-buttons
+   [:ul
+    (for [b buttons]
+      (when b
+        (let [id (formic-util/format-kw (:id b))]
+          ^{:key b}
+          [:li
+           [:button.formic-buttons-button
+            {:name     id
+             :id       id
+             :class    (:class b)
+             :on-click (fn [ev]
+                         (.preventDefault ev)
+                         ((:on-click b) form-state))}
+            (or (:label b) (s/capitalize id))]])))]])
