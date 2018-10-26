@@ -43,17 +43,16 @@
        (:flex field)  
        (:value field)
        ;;compound
-       (:compound field) 
+       (contains? field :compound)
        (when (:value field)
-         (assoc ((:serializer field) (:value field))
-                :compound (:compound field)))
+         (-> ((:serializer field) (:value field))
+             (assoc :compound
+                    (:compound field))
+             (dissoc :id)))
        ;; basic
        (contains? field :touched)
-       (when (:value field)
-         (:serializer field) (:value field))
-       ;; untouched basic clean
-       (contains? field :compound)
-       (dissoc field :compound)
+       (when (and (:touched field) (:value field))
+         ((:serializer field) (:value field)))
        :else field))
    @(:state form-state)))
 

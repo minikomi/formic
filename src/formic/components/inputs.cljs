@@ -16,9 +16,15 @@
       :value @(:value f)
       :on-change
       (fn input-on-change [ev]
-        (let [v (.. ev -target -value)]
+        (let [v (if (= (:type f) :checkbox)
+                  (.. ev -target -checked)
+                  (.. ev -target -value))]
           (reset! (:value f) v)))
       :required (boolean ((set (:validation f)) st/required))
+      :on-click
+      (fn input-on-click [ev]
+        (if (= (:type f) :checkbox)
+          (reset! (:touched f) true)))
       :on-blur
       (fn input-on-blur [e]
         (reset! (:touched f) true))}
@@ -31,13 +37,14 @@
                      :range "range"
                      :checkbox "checkbox"
                      "text")
+        options (:options f)
         range-attrs (when (= input-type "range")
                       {:step (cond
-                               (:step f) (:step f)
+                               (:step options) (:step options)
                                (= :number type) "any"
                                :else nil)
-                       :min (:min f)
-                       :max (:max f)})
+                       :min (:min options)
+                       :max (:max options)})
         title-str (u/format-kw (:id f))
         classes (:classes f)
         err @(:err f)
@@ -166,6 +173,9 @@
            [:input input-attrs] l]]))]
      [error-label f err]]))
 
+(defn hidden [f]
+  [:input {:type "hidden" :value @(:value f)}])
+
 (def default-components
   {:string     validating-input
    :email      validating-input
@@ -176,6 +186,7 @@
    :radios     radio-select
    :text       validating-textarea
    :checkboxes validating-checkboxes
+   :hidden     hidden
    })
 
 (defn unknown-field [f]

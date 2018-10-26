@@ -20,8 +20,8 @@
                         cf (get compound-fields (:compound fv))]]
             (-validate-value-path acc values form-schema fv (conj path idx))))))
 
-(defn validate-valies [form-schema values]
+(defn validate-values [form-schema values]
   (let [acc (volatile! {})]
     (doseq [f (:fields form-schema)]
       (-validate-value-path acc values form-schema f [(:id f)]))
-    @acc))
+    (not-empty @acc)))
