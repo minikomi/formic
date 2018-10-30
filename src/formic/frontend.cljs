@@ -11,7 +11,6 @@
 
 (def flip-move (r/adapt-react-class js/FlipMove))
 
-
 (defn compound-field [{:keys [state] :as form-state} f path]
   (let [compound-schema (get-in form-state [:compound (:compound f)])
         compound-error (get-in @state (conj path :err))
@@ -51,21 +50,21 @@
     [:ul.formic-flex-controls-wrapper
      {:class (:wrapper classes)}
      (let [is-disabled (or (= 1 (count @flexible-fields)) (= 0 n))]
-      [:li.up.move
-       {:class (if is-disabled
-                 (:move-disabled classes)
-                 (:move classes))}
-       [:a
+       [:li.up.move
         {:class (if is-disabled
-                 (:move-button-disabled classes)
-                 (:move-button classes))
-         :href "#"
-         :on-click
-         (fn [ev]
-           (.preventDefault ev)
-           (when (and (< 0 (count @flexible-fields)) (< 0 n))
-             (swap! flexible-fields formic-util/vswap (dec n) n)))}
-        "↑"]])
+                  (:move-disabled classes)
+                  (:move classes))}
+        [:a
+         {:class (if is-disabled
+                   (:move-button-disabled classes)
+                   (:move-button classes))
+          :href "#"
+          :on-click
+          (fn [ev]
+            (.preventDefault ev)
+            (when (and (< 0 (count @flexible-fields)) (< 0 n))
+              (swap! flexible-fields formic-util/vswap (dec n) n)))}
+         "↑"]])
      (let [is-disabled (= n (dec (count @flexible-fields)))]
        [:li.down.move
         {:class (if is-disabled
@@ -73,8 +72,8 @@
                   (:move classes))}
         [:a
          {:class (if is-disabled
-                  (:move-button-disabled classes)
-                  (:move-button classes))
+                   (:move-button-disabled classes)
+                   (:move-button classes))
           :href "#"
           :on-click
           (fn [ev]
@@ -109,38 +108,42 @@
         [flexible-controls (:controls classes) flexible-fields index]
         [field form-state ff (conj path :value index)]]))]])
 
+(defn formic-flex-add [form-state classes flex-types next f path]
+  [:ul.formic-flex-add
+   {:class (:list classes)}
+   (for [field-type flex-types]
+     ^{:key field-type}
+     [:li
+      {:class (:item classes)}
+      [:a.button
+       {:class (:button classes)
+        :href "#"
+        :on-click
+        (fn [ev]
+          (.preventDefault ev)
+          (formic-field/add-field form-state
+                                  (conj path :value)
+                                  next
+                                  f
+                                  field-type))}
+       [:span.plus "+"] (formic-util/format-kw field-type)]])])
+
 (defn flexible-field [{:keys [state compound] :as form-state} f path]
   (let [next (r/atom (or (count (:value (get-in @state path))) 0))
         dragged (r/atom nil)
         classes (merge
                  (get-in form-state [:options :classes :flex])
-                 (get-in f [:options :classes]))]
+                 (get-in f [:options :classes]))
+        flex-types (:flex f)]
     (fn [{:keys [state compound] :as form-state} f path]
-      (let [flexible-fields (r/cursor state (conj path :value)) ]
-       [:fieldset.formic-flex
-        {:class (:fieldset classes)}
-        [:h4.formic-compound-title
-         {:class (:title classes)}
-         (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
-        [formic-flex-fields form-state classes flexible-fields path]
-        [:ul.formic-flex-add
-         {:class (:add-list classes)}
-         (for [field-type (:flex f)]
-           ^{:key field-type}
-           [:li
-            {:class (:add-item classes)}
-            [:a.button
-             {:class (:add-button classes)
-              :href "#"
-              :on-click 
-              (fn [ev]
-                (.preventDefault ev)
-                (formic-field/add-field form-state
-                                        (conj path :value)
-                                        next
-                                        f
-                                        field-type))}
-             [:span.plus "+"] (formic-util/format-kw field-type)]])]]))))
+      (let [flexible-fields (r/cursor state (conj path :value))]
+        [:fieldset.formic-flex
+         {:class (:fieldset classes)}
+         [:h4.formic-flex-title
+          {:class (:title classes)}
+          (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
+         [formic-flex-fields form-state classes flexible-fields path]
+         [formic-flex-add form-state (:add classes) flex-types next f path]]))))
 
 (defn unknown-field [f]
   [:h4 "Unknown:"
@@ -162,9 +165,9 @@
                        :value value
                        :classes classes
                        :err err)]
-      [:div.formic-field
-       {:class (when @err "formic-error")}
-       (when form-component [form-component final-f])]))
+    [:div.formic-field
+     {:class (when @err "formic-error")}
+     (when form-component [form-component final-f])]))
 
 (defn field [form-state f path]
   (fn [form-state f path]
@@ -186,7 +189,7 @@
 (defn focus-error []
   (let [first-err-el (gdom/getElementByClass "formic-error")]
     (.scrollIntoView first-err-el true)
-    (when-let [first-err-input 
+    (when-let [first-err-input
                (gdom/getElementByTagNameAndClass "input" "error")]
       (.focus first-err-input))))
 
@@ -218,5 +221,4 @@
                        ((:on-click b) form-state))}
           (or (:label b) (s/capitalize
 
-                          (formic-util/format-kw (:id b))
-                          ))]]))]])
+                          (formic-util/format-kw (:id b))))]]))]])
