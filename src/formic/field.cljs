@@ -73,6 +73,11 @@
       (first
        (st/validate untouched-removed validation)))))
 
+(defn validate-flex [validation touched value]
+  (when (and touched validation)
+    (first
+     (st/validate-single value validation))))
+
 (defn dissoc-by-val [pred m]
   (into {} (filter (fn [[k v]] (not (pred v)))) m))
 
@@ -95,7 +100,9 @@
      (cond 
        ;; flex
        (:flex field)
-       (not-empty (filterv identity (:value field)))
+       (or
+        @(:err field)
+        (not-empty (filterv identity (:value field))))
        ;; compound
        (:compound field)
        (or @(:err field) (:value field))
@@ -150,6 +157,7 @@
             (get formic-inputs/default-components (:type f))
             formic-inputs/unknown-field)
         validation (:validation f)]
+    (println parsed-value)
     (swap! state assoc-in path (merge f
                                       {:value      parsed-value
                                        :component  component
@@ -180,8 +188,19 @@
       (prepare-field form-state f (conj path :value (:id f))))))
 
 (defn prepare-field-flexible [{:keys [state] :as form-state} f path]
-  (let [flex-values (or (not-empty (get-in @state path)) [])]
-    (swap! state assoc-in path (assoc f :value flex-values))
+  (let [flex-values (or (not-empty (get-in @state path)) [])
+        validation (:validation f)
+        touched (not= [] flex-values)
+        err (r/track (fn [state]
+                       (validate-flex
+                        validation
+                        (get-in @state (conj path :touched))
+                        (get-in @state (conj path :value))))
+                     state)]
+    (swap! state assoc-in path (assoc f
+                                      :value flex-values
+                                      :err err
+                                      :touched touched))
     (doseq [n (range (count flex-values))
             :let [ff (get flex-values n)]]
       (let [field-type (keyword (:compound ff))

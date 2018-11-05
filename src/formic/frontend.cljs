@@ -108,7 +108,8 @@
         [flexible-controls (:controls classes) flexible-fields index]
         [field form-state ff (conj path :value index)]]))]])
 
-(defn formic-flex-add [form-state classes flex-types next f path]
+(defn formic-flex-add [{:keys [state] :as form-state}
+                       classes flex-types next f path]
   [:ul.formic-flex-add
    {:class (:list classes)}
    (for [field-type flex-types]
@@ -121,6 +122,9 @@
         :on-click
         (fn [ev]
           (.preventDefault ev)
+          (swap! state
+                 assoc-in (conj path :touched)
+                 true)
           (formic-field/add-field form-state
                                   (conj path :value)
                                   next
@@ -130,7 +134,7 @@
 
 (defn flexible-field [{:keys [state compound] :as form-state} f path]
   (let [next (r/atom (or (count (:value (get-in @state path))) 0))
-        dragged (r/atom nil)
+        err (:err (get-in @state path))
         classes (merge
                  (get-in form-state [:options :classes :flex])
                  (get-in f [:options :classes]))
@@ -138,12 +142,22 @@
     (fn [{:keys [state compound] :as form-state} f path]
       (let [flexible-fields (r/cursor state (conj path :value))]
         [:fieldset.formic-flex
-         {:class (:fieldset classes)}
-         [:h4.formic-flex-title
-          {:class (:title classes)}
-          (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
-         [formic-flex-fields form-state classes flexible-fields path]
-         [formic-flex-add form-state (:add classes) flex-types next f path]]))))
+         {:class (if @err
+                   (:err-fieldset classes)
+                   (:fieldset classes))}
+         [:div.formic-flex-fields-wrapper
+          {:class (:fields-wrapper classes)}
+          [:h4.formic-flex-title
+           {:class (:title classes)}
+           (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
+          [formic-flex-fields form-state classes flexible-fields path]]
+         [formic-flex-add form-state (:add classes) flex-types next f path]
+         (when @err
+           [:div.error-wrapper
+            {:class (:err-wrapper classes)}
+            [:h4.error
+             {:class (:err-label classes)}
+             @err]])]))))
 
 (defn unknown-field [f]
   [:h4 "Unknown:"
