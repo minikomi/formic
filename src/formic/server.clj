@@ -6,7 +6,7 @@
         validation (:validation f)
         compound-fields (get-in form-schema [:compound])]
     (when-let [err (first (st/validate-single v validation))]
-      (v swap! acc assoc path err))
+      (vswap! acc assoc path err))
     (cond (:compound f)
           (doseq [cf (get-in compound-fields [(:compound f) :fields])]
             (-validate-value-path acc

@@ -141,7 +141,9 @@
         flex-types (:flex f)]
     (fn [{:keys [state compound] :as form-state} f path]
       (let [flexible-fields (r/cursor state (conj path :value))]
-        [:fieldset.formic-flex
+        [(if @err
+           :fieldset.formic-flex.formic-error
+           :fieldset.formic-flex)
          {:class (if @err
                    (:err-fieldset classes)
                    (:fieldset classes))}
