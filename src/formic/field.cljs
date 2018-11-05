@@ -64,19 +64,27 @@
     (when-let [v (first (st/validate-single value validation))] 
       v)))
 
+(defn remove-untouched [value]
+  (not-empty
+   (into {}
+         (for [[k v] value]
+           (when (:touched v)
+             [k (:value v)])))))
+
 (defn validate-compound [validation value]
-  (let [untouched-removed (into {}
-                                (for [[k v] value]
-                                  (when (:touched v)
-                                    [k (:value v)])))]
+  (let [untouched-removed (remove-untouched value)]
     (when validation
       (first
        (st/validate untouched-removed validation)))))
 
 (defn validate-flex [validation touched value]
   (when (and touched validation)
-    (first
-     (st/validate-single value validation))))
+    (let [values (mapv #(into {}
+                              (for [[k v] (:value %)
+                                    :when (not= :id k)]
+                                [k (:value v)])) value)]
+      (first
+       (st/validate-single values validation)))))
 
 (defn dissoc-by-val [pred m]
   (into {} (filter (fn [[k v]] (not (pred v)))) m))
@@ -157,7 +165,6 @@
             (get formic-inputs/default-components (:type f))
             formic-inputs/unknown-field)
         validation (:validation f)]
-    (println parsed-value)
     (swap! state assoc-in path (merge f
                                       {:value      parsed-value
                                        :component  component
