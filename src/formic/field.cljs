@@ -80,8 +80,7 @@
 (defn validate-flex [validation touched value]
   (when (and touched validation)
     (let [values (mapv #(into {}
-                              (for [[k v] (:value %)
-                                    :when (not= :id k)]
+                              (for [[k v] (:value %)]
                                 [k (:value v)])) value)]
       (first
        (st/validate-single values validation)))))
@@ -243,7 +242,7 @@
     (swap! (:state form-state)
            update-in path
            formic-util/conjv
-           new-field)
+           nil)
     (prepare-field-compound
      form-state
      new-field
