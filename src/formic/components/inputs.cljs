@@ -5,6 +5,13 @@
             [struct.core :as st]
             [reagent.core :as r]))
 
+(defn add-cls [cls v]
+  (cond
+    (string? cls) (str cls "." v)
+    (vector? cls) (conj cls v)
+    (nil? cls)    v
+    :else         cls))
+
 (defn error-label [f err]
   (when err [:h3 {:class (get-in f [:classes :err-label])} err]))
 
@@ -80,6 +87,7 @@
   (let [err @(:err f)
         classes (:classes f)]
     [:div.formic-select
+     {:id (u/make-path-id f)}
      [:label
       [:h5.formic-input-title
        {:class (:title classes)}
@@ -99,12 +107,13 @@
 (defn radio-select [f]
   (let [err @(:err f)
         classes (:classes f)]
-    [:div.formic-select
-     {:class (when err "error")}
+    [:div.formic-radios
+     {:class (when err "error")
+      :id (u/make-path-id f)}
      [:h5.formic-input-title
        {:class (:title classes)}
       (u/format-kw (:id f))]
-     [:ul (:field-attrs f {})
+     [:ul
       {:class (:list classes)}
       (doall
        (for [[v l] (:choices f)
@@ -129,7 +138,8 @@
          [:li
           {:class (:item classes)}
           [:label
-           {:class (:label classes)}
+           {:class
+            (add-cls (:label classes) v)}
            [:input input-attrs] l]]))]
      [error-label f err]]))
 
@@ -169,7 +179,7 @@
          [:li
           {:class (:item classes)}
           [:label
-           {:class (conj (:label classes) v)}
+           {:class (add-cls (:label classes) v)}
            [:input input-attrs] l]]))]
      [error-label f err]]))
 

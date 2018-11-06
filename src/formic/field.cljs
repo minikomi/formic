@@ -106,12 +106,12 @@
    (fn [field]
      (cond 
        ;; flex
-       (:flex field)
+       (and (:err field) (:flex field))
        (or
         @(:err field)
         (not-empty (filterv identity (:value field))))
        ;; compound
-       (:compound field)
+       (and (:err field) (:compound field))
        (or @(:err field) (:value field))
        ;; basic
        (:validation field)
@@ -242,7 +242,7 @@
     (swap! (:state form-state)
            update-in path
            formic-util/conjv
-           nil)
+           {:compound field-type})
     (prepare-field-compound
      form-state
      new-field

@@ -203,11 +203,13 @@
      [field form-state f [(:id f)]])])
 
 (defn focus-error []
-  (let [first-err-el (gdom/getElementByClass "formic-error")]
-    (.scrollIntoView first-err-el true)
-    (when-let [first-err-input
-               (gdom/getElementByTagNameAndClass "input" "error")]
-      (.focus first-err-input))))
+  (js/requestAnimationFrame
+   ;; delay until next paint
+   #(when-let [first-err-el (gdom/getElementByClass "formic-error")]
+     (.scrollIntoView first-err-el true)
+     (when-let [first-err-input
+                (gdom/getElementByTagNameAndClass "input" "error")]
+       (.focus first-err-input)))))
 
 (defn buttons
   "Renders the buttons for a set of formic fields.
