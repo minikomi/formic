@@ -28,6 +28,8 @@
                   (.. ev -target -value))]
           (reset! (:value f) v)))
       :required (boolean ((set (:validation f)) st/required))
+      :checked (and (= (:type f) :checkbox)
+                    @(:value f))
       :on-click
       (fn input-on-click [ev]
         (if (= (:type f) :checkbox)
