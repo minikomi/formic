@@ -95,9 +95,11 @@
        {:class (:title classes)}
        (u/format-kw (:id f))]
       [:select
-       {:class (:input classes)}
+
        (merge (make-attrs f)
-              {:value (or @(:value f) "")})
+              {:value (or @(:value f) "")}
+              {:class (:input classes)}
+              )
        (doall
         (for [[v l] (:choices f)]
           ^{:key v}
