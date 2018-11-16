@@ -166,11 +166,13 @@
    [:pre (with-out-str
            (pprint f))]])
 
-(defn basic-field [{:keys [state] :as form-state} f path]
+(defn basic-field [{:keys [state errors] :as form-state} f path]
   (let [form-component (get-in @state (conj path :component))
         err (r/track (fn []
-                       (let [local-state (get-in @state path)]
-                         (formic-field/validate-field local-state))))
+                       (or (get @errors
+                                (vec (remove #{:value} path))
+                                (let [local-state (get-in @state path)]
+                                  (formic-field/validate-field local-state))))))
         value (r/cursor state (conj path :value))
         touched (r/cursor state (conj path :touched))
         classes (or (get-in form-state [:options :classes :fields (:type f)])
@@ -197,6 +199,7 @@
 
 (defn fields [form-state]
   [:div.formic-fields
+   [:pre (with-out-str (cljs.pprint/pprint @(:errors form-state)))]
    (for [n (range (count (:fields form-state)))
          :let [f (get (:fields form-state) n)]]
      ^{:key n}
@@ -238,5 +241,4 @@
                        (.preventDefault ev)
                        ((:on-click b) form-state))}
           (or (:label b) (s/capitalize
-
                           (formic-util/format-kw (:id b))))]]))]])

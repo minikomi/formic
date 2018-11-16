@@ -129,6 +129,7 @@
 (declare prepare-field)
 
 (defn prepare-field-basic [{:keys [state
+                                   errors
                                    parsers
                                    defaults
                                    serializers
@@ -170,7 +171,7 @@
                                        :serializer serializer
                                        :touched    touched}))))
 
-(defn prepare-field-compound [{:keys [state] :as form-state} f path]
+(defn prepare-field-compound [{:keys [state errors] :as form-state} f path]
   (let [compound-type (:compound f)
         compound-fields (get-in form-state [:compound compound-type :fields])
         value (dissoc (get-in @state path) :compound)
@@ -224,11 +225,23 @@
     :else
     (prepare-field-basic form-state f path)))
 
-(defn prepare-state [form-schema values]
-  (let [form-state (-> (assoc form-schema :state (r/atom values)))]
-    (doseq [f (:fields form-schema)]
-      (prepare-field form-state f [(:id f)]))
-    form-state))
+(defn prepare-state
+  ;; errors-map : server side errors map of path to err
+  ([form-schema values]
+   (prepare-state form-schema values nil))
+  ([form-schema values initial-err]
+   (let [errors (r/atom nil)
+         values (r/atom values)
+         form-state (-> (assoc form-schema
+                               :state values
+                               :errors errors))]
+     (doseq [f (:fields form-schema)]
+       (prepare-field form-state f [(:id f)]))
+     (r/track! (fn []
+                 (and @values
+                      (reset! errors nil))))
+     (reset! errors initial-err)
+     form-state)))
 
 ;; flex
 ;; --------------------------------------------------------------
