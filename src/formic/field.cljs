@@ -94,6 +94,7 @@
           :id
           :type
           :options
+          :classes
           :choices
           :value
           :touched
@@ -132,6 +133,7 @@
                                    errors
                                    parsers
                                    defaults
+                                   options
                                    serializers
                                    components] 
                             :as   form-state} f path]
@@ -151,6 +153,12 @@
             identity)
         parsed-value
         (if raw-value (parser raw-value) default-value)
+        options (or
+                 (:options f)
+                 (get-in components [(:type f) :options])
+                 (get-in options [:default-options (:type f)])
+                 (get-in @registered-components [(:type f) :options])
+                 nil)
         serializer
         (or (:serializer f)
             (get serializers (:type f))
@@ -164,10 +172,17 @@
             (get components (:type f))
             (get formic-inputs/default-components (:type f))
             formic-inputs/unknown-field)
-        validation (:validation f)]
+        validation (:validation f)
+        classes
+        (or
+         (get-in f [:options :classes])
+         (get-in form-state [:options :classes :fields (:type f)]))]
+    (println (:type f) options)
     (swap! state assoc-in path (merge f
                                       {:value      parsed-value
                                        :component  component
+                                       :classes    classes
+                                       :options    options
                                        :serializer serializer
                                        :touched    touched}))))
 

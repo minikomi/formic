@@ -32,7 +32,7 @@
          [:li
           {:class (:fields-item classes)}
           [field form-state
-           (assoc cf :_key (:_key f))
+           cf
            (conj path :value (:id cf))]]))]
      (when @compound-error
        [:ul.compound-errors
@@ -176,13 +176,14 @@
                                   (formic-field/validate-field local-state))))))
         value (r/cursor state (conj path :value))
         touched (r/cursor state (conj path :touched))
-        classes (or (get-in form-state [:options :classes :fields (:type f)])
-                    (get-in f [:options :classes]))
+        classes (get-in @state (conj path :classes))
+        options (get-in @state (conj path :options))
         final-f (assoc f
                        :path path
+                       :options options
+                       :classes classes
                        :touched touched
                        :value value
-                       :classes classes
                        :err err)]
     [:div.formic-field
      {:class (when @err "formic-error")}
