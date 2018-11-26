@@ -25,7 +25,8 @@
    [(if (#{:email
            :string
            :textarea
-           :sekect
+           :select
+           :checkbox
            :number
            :range} type) :label :div)
     [:h5.formic-input-title
