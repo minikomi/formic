@@ -181,9 +181,11 @@
                     identity)
         validation (get-in form-state [:compound compound-type :validation])
         err (r/track (fn [state]
-                       (validate-compound
-                        validation
-                        (get-in @state (conj path :value))))
+                       (or
+                        (get errors (remove #{:value} path))
+                        (validate-compound
+                         validation
+                         (get-in @state (conj path :value)))))
                      state)]
     (swap! state assoc-in path
            {:id (:id f)
@@ -194,15 +196,17 @@
     (doseq [f compound-fields]
       (prepare-field form-state f (conj path :value (:id f))))))
 
-(defn prepare-field-flexible [{:keys [state] :as form-state} f path]
+(defn prepare-field-flexible [{:keys [state errors] :as form-state} f path]
   (let [flex-values (or (not-empty (get-in @state path)) [])
         validation (:validation f)
         touched (not= [] flex-values)
         err (r/track (fn [state]
-                       (validate-flex
-                        validation
-                        (get-in @state (conj path :touched))
-                        (get-in @state (conj path :value))))
+                       (or
+                        (get errors (remove #{:value} path))
+                        (validate-flex
+                         validation
+                         (get-in @state (conj path :touched))
+                         (get-in @state (conj path :value)))))
                      state)]
     (swap! state assoc-in path (assoc f
                                       :value flex-values

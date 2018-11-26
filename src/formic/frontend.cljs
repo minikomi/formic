@@ -3,6 +3,7 @@
             [formic.util :as formic-util]
             [formic.field :as formic-field]
             [goog.dom :as gdom]
+            [cljsjs.react-flip-move]
             [reagent.core :as r]
             [cljs.pprint :refer [pprint]]
             [clojure.string :as s]))
@@ -199,7 +200,6 @@
 
 (defn fields [form-state]
   [:div.formic-fields
-   [:pre (with-out-str (cljs.pprint/pprint @(:errors form-state)))]
    (for [n (range (count (:fields form-state)))
          :let [f (get (:fields form-state) n)]]
      ^{:key n}
