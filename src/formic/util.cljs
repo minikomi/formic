@@ -1,5 +1,14 @@
 (ns formic.util
-  (:require [clojure.string :as s]))
+  (:require [clojure.string :as s]
+            [goog.dom.classes :as gclass]))
+
+(defn set-body-class [class active]
+  (let [body js/document.body]
+    (if active
+      (when-not (gclass/has body class)
+        (gclass/add body class))
+      (when (gclass/has body class)
+        (gclass/remove body class)))))
 
 (defn toggle [s v]
   "Adds or removes a member from a set.
