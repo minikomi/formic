@@ -12,70 +12,81 @@
     (nil? cls)    v
     :else         cls))
 
-(defn error-label [f err]
-  (when err [:h3 {:class (get-in f [:classes :err-label])} err]))
+(defn error-label [f]
+  (let [err (:err f)
+        classes (get-in f [:classes :err-label])]
+    (fn [f]
+      (when @err
+        [:h3 {:class classes} @err]))))
 
-(defn make-attrs [f]
+(defn common-wrapper [{:keys [classes id type] :as f} body]
+  [:div.formic-input
+   {:id (u/make-path-id f)}
+   [(if (#{:email
+           :string
+           :textarea
+           :sekect
+           :number
+           :range} type) :label :div)
+    [:h5.formic-input-title
+     {:class (:title classes)}
+     (u/format-kw id)]
+    body
+    [error-label f]]])
+
+(defn make-attrs [{:keys [type
+                          options
+                          value
+                          err
+                          classes
+                          validation
+                          touched] :as f}]
   (let [path-id (u/make-path-id f)]
     (merge
      {:id path-id
       :name path-id
-      :value @(:value f)
+      :value (or @value "")
+      :type (case type
+              :email "email"
+              :number "number"
+              :range "range"
+              :checkbox "checkbox"
+              "text")
+      :class (get classes (if @err :err-input :input))
       :on-change
       (fn input-on-change [ev]
         (let [v (if (= (:type f) :checkbox)
                   (.. ev -target -checked)
                   (.. ev -target -value))]
-          (reset! (:value f) v)))
-      :required (boolean ((set (:validation f)) st/required))
-      :checked (and (= (:type f) :checkbox)
-                    @(:value f))
+          (reset! value v)))
+      :required (boolean ((set validation) st/required))
+      :checked (and (= type :checkbox)
+                    @value)
       :on-click
       (fn input-on-click [ev]
-        (if (= (:type f) :checkbox)
-          (reset! (:touched f) true)))
+        (if (= type :checkbox)
+          (reset! touched true)))
       :on-blur
       (fn input-on-blur [e]
-        (reset! (:touched f) true))}
-     (:attrs f))))
+        (reset! touched true))
+      :step (cond
+              (:step options) (:step options)
+              (= :number type) "any"
+              :else nil)
+      :min (:min options)
+      :max (:max options)})))
 
-(defn validating-input [f]
-  (let [input-type (case (:type f)
-                     :email "email"
-                     :number "number"
-                     :range "range"
-                     :checkbox "checkbox"
-                     "text")
-        options (:options f)
-        range-attrs (when (= input-type "range")
-                      {:step (cond
-                               (:step options) (:step options)
-                               (= :number type) "any"
-                               :else nil)
-                       :min (:min options)
-                       :max (:max options)})
-        title-str (u/format-kw (:id f))
-        classes (:classes f)
-        err @(:err f)
-        input-attrs (merge
-                     (make-attrs f)
-                     {:type input-type}
-                     {:class (if err
-                               (into [:error]
-                                     (:err-input classes))
-                               (:input classes))}
-                     range-attrs)]
-    [:div.formic-input
-     [:label
-      [:h5.formic-input-title
-       {:class (:title classes)}
-       title-str]
-      [:input input-attrs]]
-     (when (= input-type "range")
-       [:h6.formic-range-value
-        {:class (:range-value classes)}
-        @(:value f)])
-     [error-label f err]]))
+(defn validating-input [{:keys [type] :as f}]
+  (let [options (:options f)
+        classes (:classes f)]
+    (fn [f]
+      [common-wrapper f
+       [:div.formic-input
+        [:input (make-attrs f)]
+        (when (= type "range")
+          [:h6.formic-range-value
+           {:class (:range-value classes)}
+           @(:value f)])]])))
 
 (defn validating-textarea [f]
   (let [err @(:err f)]
@@ -86,37 +97,19 @@
      [error-label f err]]))
 
 (defn validating-select [f]
-  (let [err @(:err f)
-        classes (:classes f)]
-    [:div.formic-select
-     {:id (u/make-path-id f)}
-     [:label
-      [:h5.formic-input-title
-       {:class (:title classes)}
-       (u/format-kw (:id f))]
-      [:select
-
-       (merge (make-attrs f)
-              {:value (or @(:value f) "")}
-              {:class (:input classes)}
-              )
-       (doall
-        (for [[v l] (:choices f)]
-          ^{:key v}
-          [:option
-           {:value v
-            :disabled (get (:disabled f) v false)} l]))]]
-     [error-label f err]]))
+  [common-wrapper f
+   [:select
+    (make-attrs f)
+    (doall
+     (for [[v l] (:choices f)]
+       ^{:key v}
+       [:option
+        {:value v
+         :disabled (get (:disabled f) v false)} l]))]])
 
 (defn radio-select [f]
-  (let [err @(:err f)
-        classes (:classes f)]
-    [:div.formic-radios
-     {:class (when err "error")
-      :id (u/make-path-id f)}
-     [:h5.formic-input-title
-       {:class (:title classes)}
-      (u/format-kw (:id f))]
+  (let [classes (:classes f)]
+    [common-wrapper f
      [:ul
       {:class (:list classes)}
       (doall
@@ -144,19 +137,12 @@
           [:label
            {:class
             (add-cls (:label classes) v)}
-           [:input input-attrs] l]]))]
-     [error-label f err]]))
+           [:input input-attrs] l]]))]]))
 
 (defn validating-checkboxes [f]
-  (let [err @(:err f)
-        classes (:classes f)
+  (let [classes (:classes f)
         value (or @(:value f) #{})]
-    [:div.formic-checkboxes
-     {:id (u/make-path-id f)
-      :class (when err "error")}
-     [:h5.formic-input-title
-      {:class (:title classes)}
-      (u/format-kw (:id f))]
+    [common-wrapper f
      [:ul
       {:class (:list classes)}
       (doall
@@ -184,8 +170,7 @@
           {:class (:item classes)}
           [:label
            {:class (add-cls (:label classes) v)}
-           [:input input-attrs] l]]))]
-     [error-label f err]]))
+           [:input input-attrs] l]]))]]))
 
 (defn hidden [f]
   [:input {:type "hidden" :value @(:value f)}])
@@ -200,8 +185,7 @@
    :radios     radio-select
    :text       validating-textarea
    :checkboxes validating-checkboxes
-   :hidden     hidden
-   })
+   :hidden     hidden})
 
 (defn unknown-field [f]
   [:h4 "Unknown:"
