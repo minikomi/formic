@@ -13,27 +13,28 @@
     :else         cls))
 
 (defn error-label [f]
-  (let [err (:err f)
-        classes (get-in f [:classes :err-label])]
     (fn [f]
-      (when @err
-        [:h3 {:class classes} @err]))))
+     (let [err (:err f)
+           classes (get-in f [:classes :err-label])]
+       (when @err
+         [:h3 {:class classes} @err]))))
 
 (defn common-wrapper [{:keys [classes id type] :as f} body]
-  [:div.formic-input
-   {:id (u/make-path-id f)}
-   [(if (#{:email
-           :string
-           :textarea
-           :select
-           :checkbox
-           :number
-           :range} type) :label :div)
-    [:h5.formic-input-title
-     {:class (:title classes)}
-     (u/format-kw id)]
-    body
-    [error-label f]]])
+  (fn [{:keys [classes id type] :as f} body]
+    [:div.formic-input
+     {:id (u/make-path-id f)}
+     [(if (#{:email
+             :string
+             :textarea
+             :select
+             :checkbox
+             :number
+             :range} type) :label :div)
+      [:h5.formic-input-title
+       {:class (:title classes)}
+       (u/format-kw id)]
+      body
+      [error-label f]]]))
 
 (defn make-attrs [{:keys [type
                           options

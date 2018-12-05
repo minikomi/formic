@@ -168,26 +168,27 @@
            (pprint f))]])
 
 (defn basic-field [{:keys [state errors] :as form-state} f path]
-  (let [form-component (get-in @state (conj path :component))
-        err (r/track (fn []
-                       (or (get @errors
-                                (vec (remove #{:value} path))
-                                (let [local-state (get-in @state path)]
-                                  (formic-field/validate-field local-state))))))
-        value (r/cursor state (conj path :value))
-        touched (r/cursor state (conj path :touched))
-        classes (get-in @state (conj path :classes))
-        options (get-in @state (conj path :options))
-        final-f (assoc f
-                       :path path
-                       :options options
-                       :classes classes
-                       :touched touched
-                       :value value
-                       :err err)]
-    [:div.formic-field
-     {:class (when @err "formic-error")}
-     (when form-component [form-component final-f])]))
+  (fn [{:keys [state errors] :as form-state} f path]
+   (let [form-component (get-in @state (conj path :component))
+         err (r/track (fn []
+                        (or (get @errors
+                                 (vec (remove #{:value} path))
+                                 (let [local-state (get-in @state path)]
+                                   (formic-field/validate-field local-state))))))
+         value (r/cursor state (conj path :value))
+         touched (r/cursor state (conj path :touched))
+         classes (get-in @state (conj path :classes))
+         options (get-in @state (conj path :options))
+         final-f (assoc f
+                        :path path
+                        :options options
+                        :classes classes
+                        :touched touched
+                        :value value
+                        :err err)]
+     [:div.formic-field
+      {:class (when @err "formic-error")}
+      (when form-component [form-component final-f])])))
 
 (defn field [form-state f path]
   (fn [form-state f path]
