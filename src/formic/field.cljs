@@ -165,7 +165,7 @@
             (get-in @registered-components [(:type f) :serializer])
             identity)
         touched
-        (not (nil? parsed-value))
+        (not (nil? raw-value))
         component
         (or (:component f)
             (get-in @registered-components [(:type f) :component])
