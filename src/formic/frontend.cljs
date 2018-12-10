@@ -12,19 +12,19 @@
 
 (def flip-move (r/adapt-react-class js/FlipMove))
 
-(defn compound-field [{:keys [state] :as form-state} f path]
+(defn formic-compound-field [{:keys [state] :as form-state} f path]
   (let [compound-schema (get-in form-state [:compound (:compound f)])
-        compound-error (get-in @state (conj path :err))
-        classes (merge
-                 (get-in form-state [:options :classes :compound])
-                 (get-in compound-schema [:options :classes])
-                 (get-in f [:options :classes]))]
+        compound-error  (get-in @state (conj path :err))
+        classes         (merge
+                         (get-in form-state [:options :classes :compound])
+                         (get-in compound-schema [:options :classes])
+                         (get-in f [:options :classes]))]
     [:fieldset.formic-compound
      {:class (:fieldset classes)}
      [:h4.formic-compound-title
       {:class (:title classes)}
       (or (:title f) (s/capitalize (formic-util/format-kw (:compound f))))]
-     [:ul.formic-compound-fields
+     [:ul.formic-formic-compound-fields
       {:class (:fields-list classes)}
       (doall
        (for [cf (:fields compound-schema)]
@@ -35,7 +35,7 @@
            cf
            (conj path :value (:id cf))]]))]
      (when @compound-error
-       [:ul.compound-errors
+       [:ul.formic-compound-errors
         {:class (:errors-list classes)}
         (for [[id e] @compound-error]
           ^{:key id}
@@ -47,7 +47,7 @@
 
 (defn flexible-controls [classes flexible-fields n]
   (let [is-first (= n 0)
-        is-last (= (-> flexible-fields deref count dec) n)]
+        is-last  (= (-> flexible-fields deref count dec) n)]
     [:ul.formic-flex-controls-wrapper
      {:class (:wrapper classes)}
      (let [is-disabled (or (= 1 (count @flexible-fields)) (= 0 n))]
@@ -59,7 +59,7 @@
          {:class (if is-disabled
                    (:move-button-disabled classes)
                    (:move-button classes))
-          :href "#"
+          :href  "#"
           :on-click
           (fn [ev]
             (.preventDefault ev)
@@ -75,7 +75,7 @@
          {:class (if is-disabled
                    (:move-button-disabled classes)
                    (:move-button classes))
-          :href "#"
+          :href  "#"
           :on-click
           (fn [ev]
             (.preventDefault ev)
@@ -86,23 +86,27 @@
       {:class (:delete classes)}
       [:a
        {:class (:delete-button classes)
-        :href "#"
+        :href  "#"
         :on-click
         (fn [ev]
           (.preventDefault ev)
           (swap! flexible-fields formic-util/vremove n))}
        "✗"]]]))
 
+(def DEFAULT_FLIP_MOVE_OPTIONS
+  {:duration        200
+   :leave-animation false
+   :enter-animation "fade"})
+
 (defn formic-flex-fields [form-state classes flexible-fields path]
   [:ul.formic-flex-fields
    {:class (:fields-list classes)}
    [flip-move
-    {:duration 200
-     :leave-animation false
-     :enter-animation "fade"}
+    (or (get-in form-state [:options :flip-move]
+                DEFAULT_FLIP_MOVE_OPTIONS))
     (doall
      (for [index (range (count @flexible-fields))
-           :let [ff (get @flexible-fields index)]]
+           :let  [ff (get @flexible-fields index)]]
        ^{:key (:id ff)}
        [:li.formic-flex-field
         {:class (:fields-item classes)}
@@ -119,7 +123,7 @@
       {:class (:item classes)}
       [:a.button
        {:class (:button classes)
-        :href "#"
+        :href  "#"
         :on-click
         (fn [ev]
           (.preventDefault ev)
@@ -134,14 +138,14 @@
        [:span.plus "+"] (formic-util/format-kw field-type)]])])
 
 (defn flexible-field [{:keys [state compound] :as form-state} f path]
-  (let [next (r/atom (or (count (:value (get-in @state path))) 0))
-        err (:err (get-in @state path))
-        classes (merge
-                 (get-in form-state [:options :classes :flex])
-                 (get-in f [:options :classes]))
+  (let [next       (r/atom (or (count (:value (get-in @state path))) 0))
+        classes    (merge
+                    (get-in form-state [:options :classes :flex])
+                    (get-in f [:options :classes]))
         flex-types (:flex f)]
     (fn [{:keys [state compound] :as form-state} f path]
-      (let [flexible-fields (r/cursor state (conj path :value))]
+      (let [flexible-fields (r/cursor state (conj path :value))
+            err             (:err (get-in @state path))]
         [(if @err
            :fieldset.formic-flex.formic-error
            :fieldset.formic-flex)
@@ -169,23 +173,23 @@
 
 (defn basic-field [{:keys [state errors] :as form-state} f path]
   (fn [{:keys [state errors] :as form-state} f path]
-   (let [form-component (get-in @state (conj path :component))
-         err (r/track (fn []
-                        (or (get @errors
-                                 (vec (remove #{:value} path))
-                                 (let [local-state (get-in @state path)]
-                                   (formic-field/validate-field local-state))))))
-         value (r/cursor state (conj path :value))
-         touched (r/cursor state (conj path :touched))
-         classes (get-in @state (conj path :classes))
-         options (get-in @state (conj path :options))
-         final-f (assoc f
-                        :path path
-                        :options options
-                        :classes classes
-                        :touched touched
-                        :value value
-                        :err err)]
+    (let [form-component (get-in @state (conj path :component))
+          err            (r/track (fn []
+                                    (or (get @errors
+                                             (vec (remove #{:value} path))
+                                             (let [local-state (get-in @state path)]
+                                               (formic-field/validate-field local-state))))))
+          value          (r/cursor state (conj path :value))
+          touched        (r/cursor state (conj path :touched))
+          classes        (get-in @state (conj path :classes))
+          options        (get-in @state (conj path :options))
+          final-f        (assoc f
+                                :path path
+                                :options options
+                                :classes classes
+                                :touched touched
+                                :value value
+                                :err err)]
      [:div.formic-field
       {:class (when @err "formic-error")}
       (when form-component [form-component final-f])])))
@@ -196,7 +200,7 @@
       (:flex f)
       [flexible-field form-state f path]
       (:compound f)
-      [compound-field form-state f path]
+      [formic-compound-field form-state f path]
       :else
       [basic-field form-state f path])))
 
@@ -208,8 +212,7 @@
      [field form-state f [(:id f)]])])
 
 (defn focus-error []
-  (js/requestAnimationFrame
-   ;; delay until next paint
+  (r/after-render
    #(when-let [first-err-el (gdom/getElementByClass "formic-error")]
      (.scrollIntoView first-err-el true)
      (when-let [first-err-input
