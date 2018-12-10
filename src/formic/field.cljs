@@ -177,7 +177,6 @@
         (or
          (get-in f [:options :classes])
          (get-in form-state [:options :classes :fields (:type f)]))]
-    (println (:type f) options)
     (swap! state assoc-in path (merge f
                                       {:value      parsed-value
                                        :component  component

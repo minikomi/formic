@@ -1,7 +1,6 @@
 (ns formic.components.inputs
   (:require [formic.util :as u]
             [formic.validation :as fv]
-            [cljs.pprint :as pp]
             [struct.core :as st]
             [reagent.core :as r]))
 
