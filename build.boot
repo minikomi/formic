@@ -10,8 +10,8 @@
                             [cljsjs/react-flip-move "3.0.1-1"]
                             [garden "1.3.5"]
                             [adzerk/bootlaces "0.1.13"]
-                            [reagent "0.8.0"]
-                            [funcool/struct "1.2.0"]])
+                            [reagent "0.8.1"]
+                            [funcool/struct "1.3.0"]])
 
 (require '[adzerk.boot-test :refer :all]
          '[adzerk.bootlaces :refer :all])
