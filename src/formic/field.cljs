@@ -95,6 +95,7 @@
           :type
           :options
           :classes
+          :default
           :choices
           :value
           :touched
@@ -152,7 +153,8 @@
             (get-in @registered-components [(:type f) :parser])
             identity)
         parsed-value
-        (if raw-value (parser raw-value) default-value)
+        (if (not (nil? raw-value))
+          (parser raw-value) default-value)
         options (or
                  (:options f)
                  (get-in components [(:type f) :options])

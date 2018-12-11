@@ -57,7 +57,7 @@
       :on-change
       (fn input-on-change [ev]
         (let [v (if (= (:type f) :checkbox)
-                  (.. ev -target -checked)
+                  (boolean (.. ev -target -checked))
                   (.. ev -target -value))]
           (reset! value v)))
       :required (boolean ((set validation) st/required))
