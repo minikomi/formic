@@ -4,6 +4,7 @@
             [formic.components.inputs :as formic-inputs]
             [struct.core :as st]
             [clojure.walk :as w]
+            [clojure.string :as str]
             [cljs.pprint :refer [pprint]]
             [reagent.core :as r]))
 
@@ -72,10 +73,13 @@
              [k (:value v)])))))
 
 (defn validate-compound [validation value]
-  (let [untouched-removed (remove-untouched value)]
+  (let [value-map (into {}
+                        (for [{:keys [id value touched]} value
+                              :when touched]
+                          [id value]))]
     (when validation
       (first
-       (st/validate untouched-removed validation)))))
+       (st/validate value-map validation)))))
 
 (defn validate-flex [validation touched value]
   (when (and touched validation)
@@ -130,90 +134,99 @@
 
 (declare prepare-field)
 
-(defn prepare-field-basic [{:keys [state
-                                   errors
-                                   parsers
-                                   defaults
-                                   options
-                                   serializers
-                                   components] 
-                            :as   form-state} f path]
+(defn update-state! [state path full-f]
+  (if (number? (peek path))
+    (swap! state
+           (fn [s]
+             (if (empty? (pop path))
+               (conj s full-f)
+               (update-in s (pop path) conj full-f))))
+    (swap! state assoc-in path full-f)))
+
+(defn prepare-field-basic [{:keys [schema values errors state f path value-path] :as params}]
+  (println path f)
   (let [default-value
         (or (:default f)
-            (get defaults (:type f))
+            (get-in schema [:defaults (:type f)])
             (when (and (or (= (:type f) :select)
                            (= (:type f) :radios))
                        (:choices f))
-              (first (first (:choices f)))))
-        raw-value
-        (get-in @state path)
+              (ffirst (:choices f))))
+        raw-initial-value
+        (get-in values value-path)
         parser
         (or (:parser f)
-            (get parsers (:type f))
+            (get-in schema [:parsers (:type f)])
             (get-in @registered-components [(:type f) :parser])
             identity)
         parsed-value
-        (if (not (nil? raw-value))
-          (parser raw-value) default-value)
+        (if (not (nil? raw-initial-value))
+          (parser raw-initial-value) default-value)
         options (or
                  (:options f)
-                 (get-in components [(:type f) :options])
-                 (get-in options [:default-options (:type f)])
+                 (get-in schema [:options (:type f)])
                  (get-in @registered-components [(:type f) :options])
                  nil)
         serializer
         (or (:serializer f)
-            (get serializers (:type f))
+            (get-in schema [:serializers (:type f)])
             (get-in @registered-components [(:type f) :serializer])
             identity)
         touched
-        (not (nil? raw-value))
+        (not (nil? raw-initial-value))
         component
         (or (:component f)
+            (get-in schema [:components (:type f)])
             (get-in @registered-components [(:type f) :component])
-            (get components (:type f))
             (get formic-inputs/default-components (:type f))
             formic-inputs/unknown-field)
         validation (:validation f)
         classes
         (or
-         (get-in f [:options :classes])
-         (get-in form-state [:options :classes :fields (:type f)]))]
-    (swap! state assoc-in path (merge f
-                                      {:value      parsed-value
-                                       :component  component
-                                       :classes    classes
-                                       :options    options
-                                       :serializer serializer
-                                       :touched    touched}))))
+         (get-in f [:classes])
+         (get-in schema [:classes :fields (:type f)]))
+        full-f
+        (merge f
+               {:value      parsed-value
+                :value-path value-path
+                :component  component
+                :classes    classes
+                :options    options
+                :serializer serializer
+                :touched    touched})]
+    (update-state! state path full-f)))
 
-(defn prepare-field-compound [{:keys [state errors] :as form-state} f path]
+(defn prepare-field-compound [{:keys [schema values errors state f path value-path] :as params}]
   (let [compound-type (:compound f)
-        compound-fields (get-in form-state [:compound compound-type :fields])
-        value (dissoc (get-in @state path) :compound)
+        compound-schema (get-in schema [:compound compound-type :fields])
         serializer (or
-                    (get-in form-state [:compound compound-type :serializer])
-                    (get-in form-state [:serializers compound-type])
+                    (get-in schema [:compound compound-type :serializer])
+                    (get-in schema [:serializers compound-type])
                     identity)
-        validation (get-in form-state [:compound compound-type :validation])
-        err (r/track (fn [state]
+        validation (get-in schema [:compound compound-type :validation])
+        err (r/track (fn []
                        (or
-                        (get errors (remove #{:value} path))
+                        (get @errors value-path)
                         (validate-compound
                          validation
-                         (get-in @state (conj path :value)))))
-                     state)]
-    (swap! state assoc-in path
-           {:id (:id f)
-            :value value
-            :compound compound-type
-            :err err
-            :serializer serializer})
-    (doseq [f compound-fields]
-      (prepare-field form-state f (conj path :value (:id f))))))
+                         (get-in @state (conj path :value))))))
+        full-f  {:id (:id f)
+                 :title (or (:title f) (str/capitalize (formic-util/format-kw (:compound f))))
+                 :schema compound-schema
+                 :value []
+                 :compound compound-type
+                 :err err
+                 :serializer serializer}]
+    (update-state! state path full-f)
+    (doseq [n (range (count compound-schema))
+            :let [f (get compound-schema n)]]
+      (prepare-field (-> params
+                         (assoc :f f)
+                         (update :path conj :value n)
+                         (update :value-path conj (:id f)))))))
 
-(defn prepare-field-flexible [{:keys [state errors] :as form-state} f path]
-  (let [flex-values (or (not-empty (get-in @state path)) [])
+(defn prepare-field-flexible [{:keys [schema values errors state f path value-path] :as params}]
+ #_ (let [flex-values (or (not-empty (get-in @state path)) [])
         validation (:validation f)
         touched (not= [] flex-values)
         err (r/track (fn [state]
@@ -233,17 +246,18 @@
       (let [field-type (keyword (:compound ff))
             field-id   (keyword (str (name (:id f)) "-" n "-" (name field-type)))]
         (prepare-field form-state
+                       values
                        (assoc ff :id field-id :compound field-type)
                        (conj path :value n))))))
 
-(defn prepare-field [form-state f path]
+(defn prepare-field [{:keys [f] :as params}]
   (cond
     (:compound f)
-    (prepare-field-compound form-state f path )
+    (prepare-field-compound params)
     (:flex f)
-    (prepare-field-flexible form-state f path)
+    (prepare-field-flexible params)
     :else
-    (prepare-field-basic form-state f path)))
+    (prepare-field-basic params)))
 
 (defn prepare-state
   ;; errors-map : server side errors map of path to err
@@ -251,23 +265,30 @@
    (prepare-state form-schema values nil))
   ([form-schema values initial-err]
    (let [errors (r/atom nil)
-         values (r/atom values)
-         form-state (-> (assoc form-schema
-                               :state values
-                               :errors errors))]
-     (doseq [f (:fields form-schema)]
-       (prepare-field form-state f [(:id f)]))
+         state (r/atom [])]
+     (doseq [n (range (count (:fields form-schema)))
+             :let [f (get (:fields form-schema) n)]]
+       (prepare-field
+        {:schema form-schema
+         :values values
+         :errors errors
+         :state state
+         :path [n]
+         :value-path [(:id f)]
+         :f f}))
+     ;; reset errors to nil when state changes
      (r/track! (fn []
-                 (and @values
+                 (and @state
                       (reset! errors nil))))
      (reset! errors initial-err)
-     form-state)))
+     {:errors errors
+      :state state})))
 
 ;; flex
 ;; --------------------------------------------------------------
 
 (defn add-field [{:keys [state] :as form-state} path next f field-type]
-  (let [new-field-id (str (name (:id f)) "-" @next "-" (name field-type))
+ #_ (let [new-field-id (str (name (:id f)) "-" @next "-" (name field-type))
         new-field {:id new-field-id
                    :compound field-type}
         new-field-path (conj path

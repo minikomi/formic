@@ -13,27 +13,24 @@
 (def flip-move (r/adapt-react-class js/FlipMove))
 
 (defn formic-compound-field [{:keys [state] :as form-state} f path]
-  (let [compound-schema (get-in form-state [:compound (:compound f)])
-        compound-error  (get-in @state (conj path :err))
-        classes         (merge
-                         (get-in form-state [:options :classes :compound])
-                         (get-in compound-schema [:options :classes])
-                         (get-in f [:options :classes]))]
+  (let [compound-schema (:schema f)
+        compound-error  (:err f)
+        classes         (:classes f)]
     [:fieldset.formic-compound
      {:class (:fieldset classes)}
      [:h4.formic-compound-title
       {:class (:title classes)}
-      (or (:title f) (s/capitalize (formic-util/format-kw (:compound f))))]
+      (:title f)]
      [:ul.formic-formic-compound-fields
       {:class (:fields-list classes)}
       (doall
-       (for [cf (:fields compound-schema)]
-         ^{:key [(:id cf)]}
+       (for [n (range (count compound-schema))]
+         ^{:key n}
          [:li
           {:class (:fields-item classes)}
           [field form-state
-           cf
-           (conj path :value (:id cf))]]))]
+           (get-in @state (conj path :value n))
+           (conj path :value n)]]))]
      (when @compound-error
        [:ul.formic-compound-errors
         {:class (:errors-list classes)}
@@ -173,20 +170,14 @@
 
 (defn basic-field [{:keys [state errors] :as form-state} f path]
   (fn [{:keys [state errors] :as form-state} f path]
-    (let [form-component (get-in @state (conj path :component))
+    (let [form-component (:component f)
           err            (r/track (fn []
-                                    (or (get @errors
-                                             (vec (remove #{:value} path))
-                                             (let [local-state (get-in @state path)]
-                                               (formic-field/validate-field local-state))))))
+                                    (or (get @errors (:value-path f))
+                                        (formic-field/validate-field (get-in @state path)))))
           value          (r/cursor state (conj path :value))
           touched        (r/cursor state (conj path :touched))
-          classes        (get-in @state (conj path :classes))
-          options        (get-in @state (conj path :options))
           final-f        (assoc f
                                 :path path
-                                :options options
-                                :classes classes
                                 :touched touched
                                 :value value
                                 :err err)]
@@ -198,18 +189,25 @@
   (fn [form-state f path]
     (cond
       (:flex f)
-      [flexible-field form-state f path]
+      [:span "flex"]
+      ;;[flexible-field form-state f path]
       (:compound f)
       [formic-compound-field form-state f path]
       :else
-      [basic-field form-state f path])))
+      [basic-field form-state f path]
+      )))
 
 (defn fields [form-state]
-  [:div.formic-fields
-   (for [n (range (count (:fields form-state)))
-         :let [f (get (:fields form-state) n)]]
-     ^{:key n}
-     [field form-state f [(:id f)]])])
+  (let [state (:state form-state)]
+   [:div.formic-fields
+    (doall
+     (for [n (range (count @state))]
+       ^{:key n}
+       [:div.aaa
+        [field form-state (get-in @state [n]) [n]]]))
+    [:pre
+     (with-out-str (cljs.pprint/pprint @state))]
+    ]))
 
 (defn focus-error []
   (r/after-render
@@ -232,18 +230,19 @@
   [:div.formic-buttons
    [:ul.formic-buttons
     {:class (get-in form-state [:options :classes :buttons :list])}
-    (for [b buttons]
-      (when b
-        ^{:key b}
-        [:li.formic-button
-         {:class (get-in form-state [:options :classes :buttons :item])}
-         [:a.formic-buttons-button
-          {:name     (:id b)
-           :href "#"
-           :id       (:id b)
-           :class    (get-in form-state [:options :classes :buttons :button (:id b)])
-           :on-click (fn [ev]
-                       (.preventDefault ev)
-                       ((:on-click b) form-state))}
-          (or (:label b) (s/capitalize
-                          (formic-util/format-kw (:id b))))]]))]])
+    (doall
+     (for [b buttons]
+       (when b
+         ^{:key b}
+         [:li.formic-button
+          {:class (get-in form-state [:options :classes :buttons :item])}
+          [:a.formic-buttons-button
+           {:name     (:id b)
+            :href "#"
+            :id       (:id b)
+            :class    (get-in form-state [:options :classes :buttons :button (:id b)])
+            :on-click (fn [ev]
+                        (.preventDefault ev)
+                        ((:on-click b) form-state))}
+           (or (:label b) (s/capitalize
+                           (formic-util/format-kw (:id b))))]])))]])
