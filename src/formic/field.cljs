@@ -83,9 +83,7 @@
 
 (defn validate-flex [validation touched value]
   (when (and touched validation)
-    (let [values (mapv #(into {}
-                              (for [[k v] (:value %)]
-                                [k (:value v)])) value)]
+    (let [values (mapv #(into {} (map (juxt :id :value) (:value %))) value)]
       (first
        (st/validate-single values validation)))))
 
@@ -102,6 +100,7 @@
           :default
           :choices
           :value
+          :value-path
           :touched
           :validation
           :err
@@ -110,23 +109,31 @@
 (defn validate-all [form-state]
   (w/postwalk
    (fn [field]
-     (cond 
+     (cond
        ;; flex
        (and (:err field) (:flex field))
-       (or
-        @(:err field)
-        (not-empty (filterv identity (:value field))))
+       (do
+         (println "FLEX--------\n" field)
+         (or
+          @(:err field)
+          (not-empty (filterv identity (:value field)))))
        ;; compound
        (and (:err field) (:compound field))
-       (or @(:err field) (:value field))
+       (do
+        (println "compound--------\n" field)
+        (or @(:err field)
+             (not-empty (filter identity (:value field)))))
        ;; basic
        (:validation field)
        (validate-field field)
        ;; remove basic fields from compound
        (map? field) 
-       (not-empty
-        (dissoc-by-val nil? (not-empty (remove-regular-keys field))))
-       :else field))
+       (do
+        (println "map --------\n" field)
+        (not-empty
+         (dissoc-by-val nil? (not-empty (remove-regular-keys field)))))
+       (:value field) (:value field)
+       :else (do (println "ELSE -------\n" field) field)))
    @(:state form-state)))
 
 ;; field prep
@@ -135,7 +142,8 @@
 (declare prepare-field)
 
 (defn update-state! [state path full-f]
-  (if (number? (peek path))
+  (if (and (number? (peek path))
+           (not (get-in @state path)))
     (swap! state
            (fn [s]
              (if (empty? (pop path))
@@ -144,7 +152,6 @@
     (swap! state assoc-in path full-f)))
 
 (defn prepare-field-basic [{:keys [schema values errors state f path value-path] :as params}]
-  (println path f)
   (let [default-value
         (or (:default f)
             (get-in schema [:defaults (:type f)])
@@ -197,7 +204,9 @@
     (update-state! state path full-f)))
 
 (defn prepare-field-compound [{:keys [schema values errors state f path value-path] :as params}]
-  (let [compound-type (:compound f)
+  (let [compound-type (keyword (:compound f))
+        classes (or (get-in f [:classes])
+                    (get-in schema [:classes :compound]))
         compound-schema (get-in schema [:compound compound-type :fields])
         serializer (or
                     (get-in schema [:compound compound-type :serializer])
@@ -212,8 +221,10 @@
                          (get-in @state (conj path :value))))))
         full-f  {:id (:id f)
                  :title (or (:title f) (str/capitalize (formic-util/format-kw (:compound f))))
+                 :classes classes
                  :schema compound-schema
                  :value []
+                 :value-path value-path
                  :compound compound-type
                  :err err
                  :serializer serializer}]
@@ -226,29 +237,38 @@
                          (update :value-path conj (:id f)))))))
 
 (defn prepare-field-flexible [{:keys [schema values errors state f path value-path] :as params}]
- #_ (let [flex-values (or (not-empty (get-in @state path)) [])
+  (let [flex-values (or (not-empty (get-in values value-path)) [])
+        classes (or (get-in f [:classes])
+                    (get-in schema [:classes :flex]))
+        options (or (get-in f [:options])
+                    (get-in schema [:options :flex]))
         validation (:validation f)
         touched (not= [] flex-values)
         err (r/track (fn [state]
                        (or
-                        (get errors (remove #{:value} path))
+                        (get errors value-path)
                         (validate-flex
                          validation
                          (get-in @state (conj path :touched))
                          (get-in @state (conj path :value)))))
-                     state)]
-    (swap! state assoc-in path (assoc f
-                                      :value flex-values
-                                      :err err
-                                      :touched touched))
+                     state)
+        full-f       {:id (:id f)
+                      :flex (:flex f)
+                      :options options
+                      :value flex-values
+                      :value-path value-path
+                      :err err
+                      :touched touched}]
+    (update-state! state path full-f)
     (doseq [n (range (count flex-values))
             :let [ff (get flex-values n)]]
       (let [field-type (keyword (:compound ff))
             field-id   (keyword (str (name (:id f)) "-" n "-" (name field-type)))]
-        (prepare-field form-state
-                       values
-                       (assoc ff :id field-id :compound field-type)
-                       (conj path :value n))))))
+        (prepare-field (-> params
+                           (assoc :f (assoc ff
+                                            :id field-id))
+                           (update :path conj :value n)
+                           (update :value-path conj n)))))))
 
 (defn prepare-field [{:keys [f] :as params}]
   (cond
@@ -282,23 +302,29 @@
                       (reset! errors nil))))
      (reset! errors initial-err)
      {:errors errors
-      :state state})))
+      :state state
+      :schema form-schema})))
 
 ;; flex
 ;; --------------------------------------------------------------
 
-(defn add-field [{:keys [state] :as form-state} path next f field-type]
- #_ (let [new-field-id (str (name (:id f)) "-" @next "-" (name field-type))
+(defn add-field [{:keys [state] :as params} f path next field-type]
+  (let [new-field-id (str (name (:id f)) "-" @next "-" (name field-type))
         new-field {:id new-field-id
                    :compound field-type}
-        new-field-path (conj path
-                             (count (get-in @(:state form-state) path)))]
-    (swap! (:state form-state)
-           update-in path
+        n         (count (get-in @(:state params) (conj path :value)))
+        new-field-path (conj path :value n)
+        new-value-path (conj (:value-path f) n)]
+    (swap! state
+           assoc-in (conj path :touched)
+           true)
+    (swap! state
+           update-in (conj path :value)
            formic-util/conjv
-           {:compound field-type})
+           new-field)
     (prepare-field-compound
-     form-state
-     new-field
-     new-field-path)
+     (assoc params
+            :f new-field
+            :path new-field-path
+            :value-path new-value-path))
     (swap! next inc)))

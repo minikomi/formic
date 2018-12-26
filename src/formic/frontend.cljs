@@ -95,22 +95,26 @@
    :leave-animation false
    :enter-animation "fade"})
 
-(defn formic-flex-fields [form-state classes flexible-fields path]
-  [:ul.formic-flex-fields
-   {:class (:fields-list classes)}
-   [flip-move
-    (or (get-in form-state [:options :flip-move]
-                DEFAULT_FLIP_MOVE_OPTIONS))
-    (doall
-     (for [index (range (count @flexible-fields))
-           :let  [ff (get @flexible-fields index)]]
-       ^{:key (:id ff)}
-       [:li.formic-flex-field
-        {:class (:fields-item classes)}
-        [flexible-controls (:controls classes) flexible-fields index]
-        [field form-state ff (conj path :value index)]]))]])
+(defn formic-flex-fields [{:keys [state] :as params} f flexible-fields path]
+ [:pre (with-out-str
+         (cljs.pprint/pprint @flexible-fields))]
+  (let [classes (:classes f)]
+   (fn [{:keys [state] :as params} f flexible-fields path]
+    [:ul.formic-flex-fields
+     {:class (:fields-list classes)}
+     [flip-move
+      (or (get-in f [:options :flip-move]
+                  DEFAULT_FLIP_MOVE_OPTIONS))
+      (doall
+       (for [index (range (count @flexible-fields))
+             :let  [ff (get @flexible-fields index)]]
+         ^{:key (:id ff)}
+         [:li.formic-flex-field
+          {:class (:fields-item classes)}
+          [flexible-controls (:controls classes) flexible-fields index]
+          [field params ff (conj path :value index)]]))]])))
 
-(defn formic-flex-add [{:keys [state] :as form-state}
+(defn formic-flex-add [{:keys [state] :as params}
                        classes flex-types next f path]
   [:ul.formic-flex-add
    {:class (:list classes)}
@@ -124,21 +128,16 @@
         :on-click
         (fn [ev]
           (.preventDefault ev)
-          (swap! state
-                 assoc-in (conj path :touched)
-                 true)
-          (formic-field/add-field form-state
-                                  (conj path :value)
-                                  next
+          (formic-field/add-field params
                                   f
+                                  path
+                                  next
                                   field-type))}
        [:span.plus "+"] (formic-util/format-kw field-type)]])])
 
-(defn flexible-field [{:keys [state compound] :as form-state} f path]
+(defn flexible-field [{:keys [state compound schema] :as params} f path]
   (let [next       (r/atom (or (count (:value (get-in @state path))) 0))
-        classes    (merge
-                    (get-in form-state [:options :classes :flex])
-                    (get-in f [:options :classes]))
+        classes    (:classes f)
         flex-types (:flex f)]
     (fn [{:keys [state compound] :as form-state} f path]
       (let [flexible-fields (r/cursor state (conj path :value))
@@ -154,8 +153,8 @@
           [:h4.formic-flex-title
            {:class (:title classes)}
            (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
-          [formic-flex-fields form-state classes flexible-fields path]]
-         [formic-flex-add form-state (:add classes) flex-types next f path]
+          [formic-flex-fields params f flexible-fields path]]
+          [formic-flex-add params (:add classes) flex-types next f path]
          (when @err
            [:div.error-wrapper
             {:class (:err-wrapper classes)}
@@ -189,8 +188,7 @@
   (fn [form-state f path]
     (cond
       (:flex f)
-      [:span "flex"]
-      ;;[flexible-field form-state f path]
+      [flexible-field form-state f path]
       (:compound f)
       [formic-compound-field form-state f path]
       :else
@@ -205,8 +203,7 @@
        ^{:key n}
        [:div.aaa
         [field form-state (get-in @state [n]) [n]]]))
-    [:pre
-     (with-out-str (cljs.pprint/pprint @state))]
+
     ]))
 
 (defn focus-error []
