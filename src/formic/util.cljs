@@ -33,7 +33,7 @@
        ( (:error @f))))
 
 (defn make-path-id [f]
- (join-keywords (remove #{:value} (:path f))))
+ (join-keywords (:value-path f)))
 
 ;; vector operations
 

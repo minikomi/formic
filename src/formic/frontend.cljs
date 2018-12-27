@@ -97,8 +97,6 @@
    :enter-animation "fade"})
 
 (defn formic-flex-fields [{:keys [state] :as params} f flexible-fields path]
- [:pre (with-out-str
-         (cljs.pprint/pprint @flexible-fields))]
   (let [classes (:classes f)]
    (fn [{:keys [state] :as params} f flexible-fields path]
     [:ul.formic-flex-fields
@@ -150,7 +148,8 @@
                    (:err-fieldset classes)
                    (:fieldset classes))}
          [:div.formic-flex-fields-wrapper
-          {:class (:fields-wrapper classes)}
+          {:class (:fields-wrapper classes)
+           :id (:id f)}
           [:h4.formic-flex-title
            {:class (:title classes)}
            (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
@@ -193,8 +192,7 @@
       (:compound f)
       [formic-compound-field form-state f path]
       :else
-      [basic-field form-state f path]
-      )))
+      [basic-field form-state f path])))
 
 (defn debug-state [{:keys [state]}]
   (when goog.DEBUG
@@ -206,10 +204,7 @@
     (doall
      (for [n (range (count @state))]
        ^{:key n}
-       [:div.aaa
-        [field form-state (get-in @state [n]) [n]]]))
-
-    ]))
+       [field form-state (get-in @state [n]) [n]]))]))
 
 (defn focus-error []
   (r/after-render

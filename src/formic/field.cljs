@@ -36,25 +36,27 @@
 ;; --------------------------------------------------------------
 
 (defn serialize [form-state]
-  (w/postwalk
+  (w/prewalk
    (fn serialize-walker [field]
      (cond
        ;;flex
-       (:flex field)
+       (contains? field :flex)
        (:value field)
        ;;compound
        (contains? field :compound)
        (when (:value field)
-         (-> ((:serializer field) (:value field))
-             (assoc :compound
-                    (:compound field))
-             (dissoc :id)))
+         (as-> (:value field) v
+           (into {} (map (juxt :id :value) v))
+           ((:serializer field) v)
+           (assoc v :compound (:compound field))))
        ;; basic
        (contains? field :touched)
        (when (and (:touched field) (:value field))
          ((:serializer field) (:value field)))
        :else field))
-   @(:state form-state)))
+   (into {}
+         (map (juxt :id identity)
+              @(:state form-state)))))
 
 ;; error handling
 ;; --------------------------------------------------------------
@@ -164,7 +166,7 @@
           (parser raw-initial-value) default-value)
         options (or
                  (:options f)
-                 (get-in schema [:options (:type f)])
+                 (get-in schema [:options :fields (:type f)])
                  (get-in @registered-components [(:type f) :options])
                  nil)
         serializer
@@ -247,6 +249,7 @@
                      state)
         full-f       {:id (:id f)
                       :flex (:flex f)
+                      :classes classes
                       :options options
                       :value flex-values
                       :value-path value-path

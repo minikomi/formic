@@ -137,7 +137,7 @@
           {:class (:item classes)}
           [:label
            {:class
-            (add-cls (:label classes) v)}
+            (add-cls (:label classes) (str "value-" v))}
            [:input input-attrs] l]]))]]))
 
 (defn validating-checkboxes [f]
