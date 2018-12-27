@@ -2,6 +2,7 @@
   (:require [formic.components.inputs :as formic-inputs]
             [formic.util :as formic-util]
             [formic.field :as formic-field]
+            [datafrisk.core :as d]
             [goog.dom :as gdom]
             [cljsjs.react-flip-move]
             [reagent.core :as r]
@@ -194,6 +195,10 @@
       :else
       [basic-field form-state f path]
       )))
+
+(defn debug-state [{:keys [state]}]
+  (when goog.DEBUG
+    [d/DataFriskShell @state]))
 
 (defn fields [form-state]
   (let [state (:state form-state)]
