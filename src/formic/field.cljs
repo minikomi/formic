@@ -32,7 +32,6 @@
           field))
       fs))))
 
-
 ;; serialization
 ;; --------------------------------------------------------------
 
@@ -41,7 +40,7 @@
    (fn serialize-walker [field]
      (cond
        ;;flex
-       (:flex field)  
+       (:flex field)
        (:value field)
        ;;compound
        (contains? field :compound)
@@ -107,34 +106,28 @@
           :component))
 
 (defn validate-all [form-state]
-  (w/postwalk
-   (fn [field]
-     (cond
-       ;; flex
-       (and (:err field) (:flex field))
-       (do
-         (println "FLEX--------\n" field)
-         (or
-          @(:err field)
-          (not-empty (filterv identity (:value field)))))
-       ;; compound
-       (and (:err field) (:compound field))
-       (do
-        (println "compound--------\n" field)
-        (or @(:err field)
-             (not-empty (filter identity (:value field)))))
-       ;; basic
-       (:validation field)
-       (validate-field field)
-       ;; remove basic fields from compound
-       (map? field) 
-       (do
-        (println "map --------\n" field)
-        (not-empty
-         (dissoc-by-val nil? (not-empty (remove-regular-keys field)))))
-       (:value field) (:value field)
-       :else (do (println "ELSE -------\n" field) field)))
-   @(:state form-state)))
+  (let [error-found (volatile! nil)]
+    (doall
+     (tree-seq
+      (fn validate-all-branch [node]
+        (when-let
+            [err (cond
+                   (:err node) @(:err node)
+                   (:touched node) (validate-field node))]
+          (vreset! error-found err))
+        (and (not @error-found)
+             (or
+              (vector? node)
+              (:flex node)
+              (:compound node))))
+      (fn validate-all-children? [node]
+        (cond
+          (vector? node) node
+          (or (:flex node)
+              (:compound node))
+          (:value node)))
+      @(:state form-state)))
+    @error-found))
 
 ;; field prep
 ;; --------------------------------------------------------------
