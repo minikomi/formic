@@ -226,18 +226,18 @@
   [form-state buttons]
   [:div.formic-buttons
    [:ul.formic-buttons
-    {:class (get-in form-state [:options :classes :buttons :list])}
+    {:class (get-in form-state [:schema :classes :buttons :list])}
     (doall
      (for [b buttons]
        (when b
          ^{:key b}
          [:li.formic-button
-          {:class (get-in form-state [:options :classes :buttons :item])}
+          {:class (get-in form-state [:schema :classes :buttons :item])}
           [:a.formic-buttons-button
            {:name     (:id b)
             :href "#"
             :id       (:id b)
-            :class    (get-in form-state [:options :classes :buttons :button (:id b)])
+            :class    (get-in form-state [:schema :classes :buttons :button (:id b)])
             :on-click (fn [ev]
                         (.preventDefault ev)
                         ((:on-click b) form-state))}
