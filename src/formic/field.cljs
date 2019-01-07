@@ -262,7 +262,8 @@
             field-id   (keyword (str (name (:id f)) "-" n "-" (name field-type)))]
         (prepare-field (-> params
                            (assoc :f (assoc ff
-                                            :id field-id))
+                                            :id field-id
+                                            :classes classes))
                            (update :path conj :value n)
                            (update :value-path conj n)))))))
 

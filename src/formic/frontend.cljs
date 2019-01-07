@@ -98,20 +98,20 @@
 
 (defn formic-flex-fields [{:keys [state] :as params} f flexible-fields path]
   (let [classes (:classes f)]
-   (fn [{:keys [state] :as params} f flexible-fields path]
-    [:ul.formic-flex-fields
-     {:class (:fields-list classes)}
-     [flip-move
-      (or (get-in f [:options :flip-move]
-                  DEFAULT_FLIP_MOVE_OPTIONS))
-      (doall
-       (for [index (range (count @flexible-fields))
-             :let  [ff (get @flexible-fields index)]]
-         ^{:key (:id ff)}
-         [:li.formic-flex-field
-          {:class (:fields-item classes)}
-          [flexible-controls (:controls classes) flexible-fields index]
-          [field params ff (conj path :value index)]]))]])))
+    (fn [{:keys [state] :as params} f flexible-fields path]
+      [:ul.formic-flex-fields
+       {:class (:fields-list classes)}
+       [flip-move
+        (or (get-in f [:options :flip-move]
+                    DEFAULT_FLIP_MOVE_OPTIONS))
+        (doall
+         (for [index (range (count @flexible-fields))
+               :let  [ff (get @flexible-fields index)]]
+           ^{:key (:id ff)}
+           [:li.formic-flex-field
+            {:class (:fields-item classes)}
+            [flexible-controls (:controls classes) flexible-fields index]
+            [field params ff (conj path :value index)]]))]])))
 
 (defn formic-flex-add [{:keys [state] :as params}
                        classes flex-types next f path]
@@ -154,7 +154,7 @@
            {:class (:title classes)}
            (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
           [formic-flex-fields params f flexible-fields path]]
-          [formic-flex-add params (:add classes) flex-types next f path]
+         [formic-flex-add params (:add classes) flex-types next f path]
          (when @err
            [:div.error-wrapper
             {:class (:err-wrapper classes)}
@@ -180,9 +180,9 @@
                                 :touched touched
                                 :value value
                                 :err err)]
-     [:div.formic-field
-      {:class (when @err "formic-error")}
-      (when form-component [form-component final-f])])))
+      [:div.formic-field
+       {:class (when @err "formic-error")}
+       (when form-component [form-component final-f])])))
 
 (defn field [form-state f path]
   (fn [form-state f path]
@@ -200,19 +200,19 @@
 
 (defn fields [form-state]
   (let [state (:state form-state)]
-   [:div.formic-fields
-    (doall
-     (for [n (range (count @state))]
-       ^{:key n}
-       [field form-state (get-in @state [n]) [n]]))]))
+    [:div.formic-fields
+     (doall
+      (for [n (range (count @state))]
+        ^{:key n}
+        [field form-state (get-in @state [n]) [n]]))]))
 
 (defn focus-error []
   (r/after-render
    #(when-let [first-err-el (gdom/getElementByClass "formic-error")]
-     (.scrollIntoView first-err-el true)
-     (when-let [first-err-input
-                (gdom/getElementByTagNameAndClass "input" "error")]
-       (.focus first-err-input)))))
+      (.scrollIntoView first-err-el true)
+      (when-let [first-err-input
+                 (gdom/getElementByTagNameAndClass "input" "error")]
+        (.focus first-err-input)))))
 
 (defn buttons
   "Renders the buttons for a set of formic fields.
