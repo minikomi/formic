@@ -13,6 +13,8 @@
 
 (def registered-components (atom {}))
 
+(enable-console-print!)
+
 (defn register-component [component-name component]
   (println "Registering:" component-name)
   (swap! registered-components 
@@ -36,23 +38,27 @@
 ;; --------------------------------------------------------------
 
 (defn serialize [form-state]
-  (w/prewalk
+  (w/postwalk
    (fn serialize-walker [field]
      (cond
        ;;flex
        (contains? field :flex)
-       (:value field)
+       (filterv identity (:value field))
        ;;compound
        (contains? field :compound)
        (when (:value field)
          (as-> (:value field) v
-           (into {} (map (juxt :id :value) v))
+           (into {} (map (juxt :id :value) (filter :value v)))
            ((:serializer field) v)
-           (assoc v :compound (:compound field))))
+           (when (not-empty v)
+             (assoc v :compound (:compound field)))))
        ;; basic
        (contains? field :touched)
-       (when (and (:touched field) (:value field))
-         ((:serializer field) (:value field)))
+       (when (:touched field)
+         (when-let [v ((:serializer field) (:value field))]
+           {:id (:id field)
+            :touched true
+            :value v}))
        :else field))
    (into {}
          (map (juxt :id identity)
@@ -98,6 +104,7 @@
           :type
           :options
           :classes
+          :label
           :default
           :choices
           :value
