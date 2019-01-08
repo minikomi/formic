@@ -31,7 +31,9 @@
              :range} type) :label :div)
       [:h5.formic-input-title
        {:class (:title classes)}
-       (u/format-kw id)]
+       (or
+        (:label f)
+        (u/format-kw id))]
       body
       [error-label f]]]))
 
@@ -59,17 +61,23 @@
         (let [v (if (= (:type f) :checkbox)
                   (boolean (.. ev -target -checked))
                   (.. ev -target -value))]
-          (reset! value v)))
+          (reset! value v)
+          (when-let  [f (:on-change options)]
+            (f ev))))
       :required (boolean ((set validation) st/required))
       :checked (and (= type :checkbox)
                     @value)
       :on-click
       (fn input-on-click [ev]
         (if (= type :checkbox)
-          (reset! touched true)))
+          (reset! touched true))
+        (when-let  [f (:on-click options)]
+          (f ev)))
       :on-blur
-      (fn input-on-blur [e]
-        (reset! touched true))
+      (fn input-on-blur [ev]
+        (reset! touched true)
+        (when-let  [f (:on-blur options)]
+          (f ev)))
       :step (cond
               (:step options) (:step options)
               (= :number type) "any"
