@@ -37,32 +37,35 @@
 ;; serialization
 ;; --------------------------------------------------------------
 
+
+(declare -serialize)
+
+(defn serialize-basic [{:keys [id serializer value]}]
+  (serializer value))
+
+(defn serialize-compound [{:keys [id compound value serializer] :as field}]
+  (if serializer
+    (as-> (:value field) v
+      (into {} (map #(vector (:id %) (-serialize %)) v))
+      (serializer v)
+      (when (not-empty v)
+        (assoc v :compound (:compound field))))
+    field))
+
+(defn serialize-flex [{:keys [value id]}]
+  (filterv identity (mapv -serialize value)))
+
+(defn -serialize [field]
+  (cond (and (:flex field) (:value field)) (serialize-flex field)
+        (and (:compound field) (:value field)) (serialize-compound field)
+        (and (:serializer field) (contains? field :value)) (serialize-basic field)
+        (vector? field) (mapv -serialize field)
+        :else field))
+
 (defn serialize [form-state]
-  (w/postwalk
-   (fn serialize-walker [field]
-     (cond
-       ;;flex
-       (contains? field :flex)
-       (filterv identity (:value field))
-       ;;compound
-       (contains? field :compound)
-       (when (:value field)
-         (as-> (:value field) v
-           (into {} (map (juxt :id :value) (filter :value v)))
-           ((:serializer field) v)
-           (when (not-empty v)
-             (assoc v :compound (:compound field)))))
-       ;; basic
-       (contains? field :serializer)
-       (when (:touched field)
-         (when-let [v ((:serializer field) (:value field))]
-           {:id (:id field)
-            :touched true
-            :value v}))
-       :else field))
-   (into {}
-         (map (juxt :id identity)
-              @(:state form-state)))))
+  (into {}
+        (map (juxt :id -serialize)
+             @(:state form-state))))
 
 ;; error handling
 ;; --------------------------------------------------------------
