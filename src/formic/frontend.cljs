@@ -93,6 +93,7 @@
 
 (def DEFAULT_FLIP_MOVE_OPTIONS
   {:duration        200
+   :type-name nil
    :leave-animation false
    :enter-animation "fade"})
 

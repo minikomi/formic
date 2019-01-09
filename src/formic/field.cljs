@@ -53,7 +53,7 @@
            (when (not-empty v)
              (assoc v :compound (:compound field)))))
        ;; basic
-       (contains? field :touched)
+       (contains? field :serializer)
        (when (:touched field)
          (when-let [v ((:serializer field) (:value field))]
            {:id (:id field)
@@ -203,6 +203,7 @@
                 :options    options
                 :serializer serializer
                 :touched    touched})]
+    (println (:id f) serializer)
     (update-state! state path full-f)))
 
 (defn prepare-field-compound [{:keys [schema values errors state f path value-path] :as params}]
