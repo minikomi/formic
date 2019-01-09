@@ -223,7 +223,9 @@
                          validation
                          (get-in @state (conj path :value))))))
         full-f  {:id (:id f)
-                 :title (or (:title f) (str/capitalize (formic-util/format-kw (:compound f))))
+                 :title (or (:title f)
+                            (str/capitalize (formic-util/format-kw (:id f)))
+                            (str/capitalize (formic-util/format-kw (:compound f))))
                  :classes classes
                  :schema compound-schema
                  :value []
@@ -316,6 +318,7 @@
 (defn add-field [{:keys [state] :as params} f path next field-type]
   (let [new-field-id (str (name (:id f)) "-" @next "-" (name field-type))
         new-field {:id new-field-id
+                   :title (formic-util/format-kw field-type)
                    :compound field-type}
         n         (count (get-in @(:state params) (conj path :value)))
         new-field-path (conj path :value n)
