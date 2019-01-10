@@ -103,8 +103,7 @@
       [:ul.formic-flex-fields
        {:class (:fields-list classes)}
        [flip-move
-        (or (get-in f [:options :flip-move]
-                    DEFAULT_FLIP_MOVE_OPTIONS))
+        (get-in f [:options :flip-move] DEFAULT_FLIP_MOVE_OPTIONS)
         (doall
          (for [index (range (count @flexible-fields))
                :let  [ff (get @flexible-fields index)]]

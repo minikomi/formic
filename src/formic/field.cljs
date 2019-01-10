@@ -276,7 +276,8 @@
         (prepare-field (-> params
                            (assoc :f (assoc ff
                                             :id field-id
-                                            :classes classes))
+                                            :title (formic-util/format-kw field-type)
+                                            ))
                            (update :path conj :value n)
                            (update :value-path conj n)))))))
 
