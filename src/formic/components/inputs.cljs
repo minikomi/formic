@@ -31,9 +31,7 @@
              :range} type) :label :div)
       [:h5.formic-input-title
        {:class (:title classes)}
-       (or
-        (:label f)
-        (u/format-kw id))]
+       (:title f)]
       body
       [error-label f]]]))
 
