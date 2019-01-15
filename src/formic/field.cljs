@@ -200,13 +200,14 @@
         full-f
         (merge f
                {:value      parsed-value
+                :title (or (:title f)
+                           (str/capitalize (formic-util/format-kw (:id f))))
                 :value-path value-path
                 :component  component
                 :classes    classes
                 :options    options
                 :serializer serializer
                 :touched    touched})]
-    (println (:id f) serializer)
     (update-state! state path full-f)))
 
 (defn prepare-field-compound [{:keys [schema values errors state f path value-path] :as params}]
