@@ -14,34 +14,47 @@
 (def flip-move (r/adapt-react-class js/FlipMove))
 
 (defn formic-compound-field [{:keys [state] :as form-state} f path]
-  (let [compound-schema (:schema f)
-        compound-error  (:err f)
-        classes         (:classes f)]
-    [:fieldset.formic-compound
-     {:class (:fieldset classes)}
-     [:h4.formic-compound-title
-      {:class (:title classes)}
-      (:title f)]
-     [:ul.formic-formic-compound-fields
-      {:class (:fields-list classes)}
-      (doall
-       (for [n (range (count compound-schema))]
-         ^{:key n}
-         [:li
-          {:class (:fields-item classes)}
-          [field form-state
-           (get-in @state (conj path :value n))
-           (conj path :value n)]]))]
-     (when @compound-error
-       [:ul.formic-compound-errors
-        {:class (:errors-list classes)}
-        (for [[id e] @compound-error]
-          ^{:key id}
-          [:li
-           {:class (:errors-item classes)}
-           [:h4.error
-            {:class (:error classes)}
-            [:strong (formic-util/format-kw id)] ": " e]])])]))
+  (let [collapsed (r/atom (and (get-in f [:options :collapsable])
+                               (get-in f [:options :default-collapsed])))
+        compound-schema (:schema f)
+        classes         (:classes f)
+        options         (:options f)]
+    (fn [{:keys [state] :as form-state} f path]
+      (let [compound-error  (:err f)]
+        [:fieldset.formic-compound
+         {:class (:fieldset classes)}
+         [:h4.formic-compound-title
+          {:class (:title classes)}
+          (:title f)
+          (when (:collapsable options)
+            [:a.formic-compound-collapse-button
+             {:class (:collapse-button classes)
+              :href "#"
+              :on-click (fn [ev]
+                          (.preventDefault ev)
+                          (swap! collapsed not))}
+             (if @collapsed "▶" "▼")])]
+         (when-not @collapsed
+           [:ul.formic-formic-compound-fields
+            {:class (:fields-list classes)}
+            (doall
+             (for [n (range (count compound-schema))]
+               ^{:key n}
+               [:li
+                {:class (:fields-item classes)}
+                [field form-state
+                 (get-in @state (conj path :value n))
+                 (conj path :value n)]]))])
+         (when @compound-error
+           [:ul.formic-compound-errors
+            {:class (:errors-list classes)}
+            (for [[id e] @compound-error]
+              ^{:key id}
+              [:li
+               {:class (:errors-item classes)}
+               [:h4.error
+                {:class (:error classes)}
+                [:strong (formic-util/format-kw id)] ": " e]])])]))))
 
 (defn flexible-controls [classes flexible-fields n]
   (let [is-first (= n 0)
@@ -180,6 +193,7 @@
                                 :touched touched
                                 :value value
                                 :err err)]
+
       [:div.formic-field
        {:class (when @err "formic-error")}
        (when form-component [form-component final-f])])))

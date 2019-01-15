@@ -214,12 +214,15 @@
   (let [compound-type (keyword (:compound f))
         classes (or (get-in f [:classes])
                     (get-in schema [:classes :compound]))
-        compound-schema (get-in schema [:compound compound-type :fields])
+        compound-schema (get-in schema [:compound compound-type])
+        compound-fields (:fields compound-schema)
         serializer (or
                     (get-in schema [:compound compound-type :serializer])
                     (get-in schema [:serializers compound-type])
                     identity)
         validation (get-in schema [:compound compound-type :validation])
+        options (merge (get-in schema [:options :compound])
+                       (:options compound-schema))
         err (r/track (fn []
                        (or
                         (get @errors value-path)
@@ -232,14 +235,15 @@
                             (str/capitalize (formic-util/format-kw (:compound f))))
                  :classes classes
                  :schema compound-schema
+                 :options options
                  :value []
                  :value-path value-path
                  :compound compound-type
                  :err err
                  :serializer serializer}]
     (update-state! state path full-f)
-    (doseq [n (range (count compound-schema))
-            :let [f (get compound-schema n)]]
+    (doseq [n (range (count compound-fields))
+            :let [f (get compound-fields n)]]
       (prepare-field (-> params
                          (assoc :f f)
                          (update :path conj :value n)
