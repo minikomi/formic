@@ -53,7 +53,9 @@
               :range "range"
               :checkbox "checkbox"
               "text")
-      :class (get classes (if @err :err-input :input))
+      :class (add-cls
+               (get classes (if @err :err-input :input))
+               (when @err "error"))
       :on-change
       (fn input-on-change [ev]
         (let [v (if (= (:type f) :checkbox)
