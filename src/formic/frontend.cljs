@@ -14,8 +14,8 @@
 (def flip-move (r/adapt-react-class js/FlipMove))
 
 (defn formic-compound-field [{:keys [state] :as form-state} f path]
-  (let [collapsed (r/atom (and (get-in f [:options :collapsable])
-                               (get-in f [:options :default-collapsed])))
+  (let [collapsable     (:collapsable f)
+        collapsed       (:collapsed f)
         compound-schema (:schema f)
         classes         (:classes f)
         options         (:options f)]
@@ -26,7 +26,7 @@
          [:h4.formic-compound-title
           {:class (:title classes)}
           (:title f)
-          (when (:collapsable options)
+          (when collapsable
             [:a.formic-compound-collapse-button
              {:class (:collapse-button classes)
               :href "#"
@@ -34,11 +34,11 @@
                           (.preventDefault ev)
                           (swap! collapsed not))}
              (if @collapsed "▶" "▼")])]
-         (when-not @collapsed
+         (when-not (and collapsable @collapsed)
            [:ul.formic-formic-compound-fields
             {:class (:fields-list classes)}
             (doall
-             (for [n (range (count compound-schema))]
+             (for [n (range (count (:fields compound-schema)))]
                ^{:key n}
                [:li
                 {:class (:fields-item classes)}
@@ -219,6 +219,12 @@
       (for [n (range (count @state))]
         ^{:key n}
         [field form-state (get-in @state [n]) [n]]))]))
+
+(defn uncollapse [{:keys [state]} path]
+  (doseq [n (range (count path))
+          :let [sub-path (subvec path 0 n)]]
+    (when-let [c (:collapsed (get-in @state sub-path))]
+      (reset! c false))))
 
 (defn focus-error []
   (r/after-render

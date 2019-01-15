@@ -112,6 +112,7 @@
           :choices
           :value
           :value-path
+          :path
           :touched
           :validation
           :err
@@ -126,7 +127,8 @@
             [err (cond
                    (:err node) @(:err node)
                    (:touched node) (validate-field node))]
-          (vreset! error-found err))
+          (vreset! error-found {:node node
+                                :err err}))
         (and (not @error-found)
              (or
               (vector? node)
@@ -203,6 +205,7 @@
                 :title (or (:title f)
                            (str/capitalize (formic-util/format-kw (:id f))))
                 :value-path value-path
+                :path       path
                 :component  component
                 :classes    classes
                 :options    options
@@ -223,6 +226,10 @@
         validation (get-in schema [:compound compound-type :validation])
         options (merge (get-in schema [:options :compound])
                        (:options compound-schema))
+
+        collapsable (:collapsable options)
+        collapsed (when collapsable
+                    (r/atom (:default-collapsed options)))
         err (r/track (fn []
                        (or
                         (get @errors value-path)
@@ -235,9 +242,11 @@
                             (str/capitalize (formic-util/format-kw (:compound f))))
                  :classes classes
                  :schema compound-schema
-                 :options options
+                 :collapsed collapsed
+                 :collapsable collapsable
                  :value []
                  :value-path value-path
+                 :path path
                  :compound compound-type
                  :err err
                  :serializer serializer}]
@@ -271,6 +280,7 @@
                       :options options
                       :value flex-values
                       :value-path value-path
+                      :path path
                       :err err
                       :touched touched}]
     (update-state! state path full-f)
