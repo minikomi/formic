@@ -37,7 +37,6 @@
 ;; serialization
 ;; --------------------------------------------------------------
 
-
 (declare -serialize)
 
 (defn serialize-basic [{:keys [id serializer value]}]
@@ -49,7 +48,10 @@
       (into {} (map #(vector (:id %) (-serialize %)) v))
       (serializer v)
       (when (not-empty v)
-        (assoc v :compound (:compound field))))
+        (with-meta
+         (assoc v
+                :compound (:compound field))
+         {:id (:id field)})))
     field))
 
 (defn serialize-flex [{:keys [value id]}]
