@@ -58,9 +58,12 @@
                (when @err "error"))
       :on-change
       (fn input-on-change [ev]
-        (let [v (if (= (:type f) :checkbox)
-                  (boolean (.. ev -target -checked))
-                  (.. ev -target -value))]
+        (let [v (cond (= (:type f) :checkbox)
+                      (boolean (.. ev -target -checked))
+                      (= (:type f) :number)
+                      (not-empty (.. ev -target -value))
+                      :else
+                      (.. ev -target -value))]
           (reset! value v)
           (when-let  [f (:on-change options)]
             (f ev))))
