@@ -1,5 +1,5 @@
 (def project 'co.poyo/formic)
-(def version "0.1.4")
+(def version "0.1.5")
 
 (set-env! :resource-paths #{"src"}
           :dependencies   '[[org.clojure/clojure "1.9.0"]
