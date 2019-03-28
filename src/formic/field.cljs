@@ -240,6 +240,7 @@
                          (get-in @state (conj path :value))))))
         full-f  {:id (:id f)
                  :title (or (:title f)
+                            (:title compound-schema)
                             (str/capitalize (formic-util/format-kw (:id f)))
                             (str/capitalize (formic-util/format-kw (:compound f))))
                  :classes classes
@@ -280,6 +281,7 @@
                       :flex (:flex f)
                       :classes classes
                       :options options
+                      :title (:title f)
                       :value flex-values
                       :value-path value-path
                       :path path
@@ -292,9 +294,7 @@
             field-id   (keyword (str (name (:id f)) "-" n "-" (name field-type)))]
         (prepare-field (-> params
                            (assoc :f (assoc ff
-                                            :id field-id
-                                            :title (formic-util/format-kw field-type)
-                                            ))
+                                            :id field-id))
                            (update :path conj :value n)
                            (update :value-path conj n)))))))
 

@@ -126,7 +126,7 @@
             [flexible-controls (:controls classes) flexible-fields index]
             [field params ff (conj path :value index)]]))]])))
 
-(defn formic-flex-add [{:keys [state] :as params}
+(defn formic-flex-add [{:keys [state schema] :as params}
                        classes flex-types next f path]
   [:ul.formic-flex-add
    {:class (:list classes)}
@@ -145,7 +145,9 @@
                                   path
                                   next
                                   field-type))}
-       [:span.plus "+"] (formic-util/format-kw field-type)]])])
+       [:span.plus "+"] (or
+                         (get-in schema [:compound field-type :title])
+                         (formic-util/format-kw field-type))]])])
 
 (defn flexible-field [{:keys [state compound schema] :as params} f path]
   (let [next       (r/atom (or (count (:value (get-in @state path))) 0))
