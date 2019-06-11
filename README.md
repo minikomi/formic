@@ -21,130 +21,159 @@ Frontend / Backend tools for clojure projects
 
 ```clj
 
-(ns proj.formdata
-  (:require [formic.validation :as fv]
-            [proj.route :as route]
-            [struct.core :as st]))
+;; custom validator example
 
-(def s3-api
-  {:get-signed (route/to :admin/get-signed)
-   :success (route/to :admin/upload-success)
-   :list (route/to :admin/images-all)})
+(defn date-active? [d]
+  (not
+   (t/equal? d (t/today))))
 
-(def flex-data
-  {:heading
-   {:fields
-    [{:name :text
-      :type :string
-      :validation [st/required]}]}
-   ;; -------------------------------------------------
-   :text-block
-   {:fields
-    [{:name :text
-      :type :medium}]}
-   ;; -------------------------------------------------
-   :contact
-   {:fields
-    [{:name :first-name
-      :type :string
-      :validation [st/required]}
-     {:name :last-name
-      :validation [st/required]
-      :type :string}
-     {:name :email
-      :type :email
-      :validation [st/required st/email]}]}
-   ;; -------------------------------------------------
-   :user
-   {:fields
-    [{:name :username
-      :type :string
-      :validation [st/required]}
-     {:name :email
-      :type :email
-      :validation [st/required st/email]}
-     {:name :email-verification
-      :type :email
-      :validation [st/required st/email]}]
-    :validation
-    [[:email-verification [st/identical-to :email]]]}
-   ;; -------------------------------------------------
-   :captioned-image
-   {:fields
-    [{:name :image
-      :type :image
-      :endpoints s3-api}
-     {:name :caption
-      :type :string}]}})
+(def validate-date
+  {:message "Choose any date but today."
+   :optional true
+   :validate date-active?})
 
-(def single-data
-  [{:name :infob
-    :fields
-    [{:name :simple-string
-      :type :string}
-     {:name :simple-text-required
-      :type :string
-      :validation [st/required]}
-     {:name :email
-      :type :email
-      :validation [st/email]}
-     {:name :number
-      :type :number
-      :validation [st/integer-str]}
-     {:name :range
-      :type :range
-      :min 5
-      :max 10
-      :validation [st/integer-str [st/in-range 5 10]]}
-     {:name :text-area
-      :type :text
-      :validation [st/string-like [fv/length-range 0 100]]}
-     {:name :select
-      :type :select
-      :options [["ya-val" "ya"]
-                ["banana-val" "banana"]
-                ["cool-val" "cool"]
-                ["what-val" "what"]]
-      :disabled #{"what-val"}
-      :validation [[st/member #{"ya-val"}]]}
-     {:name :radios
-      :type :radios
-      :options [["a-value" "a"]
-                ["b-value" "b"]
-                ["c-value" "c"]]
-      :validation [[st/member #{"c-value"}]]}
-     {:name :checkboxes
-      :type :checkboxes
-      :options [["a-value" "a"]
-                ["b-value" "b"]
-                ["c-value" "c"]]
-      :validation [st/required]}
-     {:name :date
-      :type :date
-      :min-date "2012-03-01"
-      :max-date "2018-03-12"
-      :validation [fv/default-date-format]}
-     {:name :user-input
-      :type :compound
-      :field :user}
-     {:name :image-field
-      :type :image
-      :endpoints s3-api}
-     {:name :multi
-      :type :flexible
-      :flex [:heading :contact]}
-     {:name :imagetest
-      :type :image
-      :endpoints s3-api}]}
-   ])
+;; custom image modal example
 
+(defn list-images-fn [endpoints state]
+  (swap! state assoc
+         :mode :loading
+         :current-images nil)
+  (let [endpoint (if (:search-str @state)
+                   (str (:search endpoints)
+                        "&page=" (inc (:current-page @state 0))
+                        "&query=" (:search-str @state))
+                   (str (:list endpoints) "&page=" (inc (:current-page @state 0))))]
+    (ajax/GET endpoint
+              {:response-format
+               (ajax/ring-response-format {:format (ajax/json-response-format)})
+               :error-handler (formic-imagemodal/default-error-handler state)
+               :handler
+               (fn [resp]
+                 (swap! state assoc
+                        :mode :loaded
+                        :next-page
+                        (when-let [total-str (get-in resp [:headers "x-total"])]
+                          (> (js/parseInt total-str)
+                             (* 30 (inc (:current-page @state 0)))))
+                        :prev-page
+                        (> 0 (:current-page @state))
+                        :current-images
+                        (mapv
+                         #(get-in % ["urls" "raw"])
+                         (if-let  [results (get-in resp [:body "results"])]
+                           results
+                           (:body resp)))))})))
+
+(def imagemodal-options
+  {:endpoints {:list "https://api.unsplash.com/photos/?client_id=8f062abdd94634c81701ddd1e02a62089396f1088b973b632d93ab45157e7c92&per_page=30"
+               :search "https://api.unsplash.com/search/photos/?client_id=8f062abdd94634c81701ddd1e02a62089396f1088b973b632d93ab45157e7c92&per_page=30"}
+   :paging true
+   :search true
+   :image->title
+   (constantly false)
+   :image->src
+   (fn [img]
+     (str img
+          "&w=300&h=300&fit=clamp"))
+   :image->thumbnail
+   (fn [img]
+     (str img
+          "&w=300&h=300&fit=clamp"))
+   :list-images-fn list-images-fn})
+
+;; Compound fields
+
+(def page-details-field
+  {:fields
+   [{:id :title-text
+     :type :string
+     :validation [st/required]}
+    {:id :hero-image
+     :type :formic-imagemodal
+     :options imagemodal-options}
+    {:id :date-created
+     :default (t/today)
+     :type :formic-datepicker
+     :validation [st/required validate-date]
+     :options {:active? date-active?}}
+    {:id :title-type
+     :type :radios
+     :choices {"normal" "Normal"
+               "wide" "Wide"}
+     :validation [st/required]}
+    {:id :title-color
+     :type :color-picker}
+    {:id :subtitle-text
+     :label "Subtitle (optional)"
+     :type :string
+     :validation []}]})
+
+(def captioned-image-field
+  {:options {:collapsable false}
+   :fields
+   [{:id :image
+     :type :formic-imagemodal
+     :validation [st/required]
+     :options imagemodal-options}
+    {:id :caption
+     :type :string}]})
+
+(def paragraph-field
+  {:fields
+   [{:id :title
+     :title "Title (optional)"
+     :type :string}
+    {:id :body
+     :type :formic-quill
+     :validation [quill/not-blank]}]})
+
+(def gallery-field
+  {:fields
+   [{:id :images
+     :flex [:captioned-image]}]})
+
+(def compound-fields
+  {:page page-details-field
+   :captioned-image captioned-image-field
+   :paragraph paragraph-field
+   :gallery gallery-field})
+
+;; form schema
+
+(def form-schema
+  {:id :test-form
+   :components {:color-picker color-picker/component}
+   :options {:compound {:collapsable true
+                        :default-collapsed true}}
+   :compound compound-fields
+   :fields [{:id :page-data
+             :compound :page}
+            {:id :article-body
+             :flex [:paragraph :gallery]}]
+   :classes form-styles/combined})
 ```
 
-## Frontend:
+## Frontend using reagent:
 
 ```cljs
-[:form
-  [formic.frontend/fields flex-data single-form-data values]]
+(defn form-component [form-schema]
+  (let [form-state (formic-field/prepare-state form-schema starting-data)] ;; prepare form state
+    (fn [form-schema] 
+      [:div "Parent component"
+       [:form
+        [formic-frontend/fields form-state] ;; render form
+        [:button
+         {:on-click (fn [ev]
+                      (.preventDefault ev)
+                      (formic-field/touch-all! form-state)
+                      (when-let [err (formic-field/validate-all form-state)] ;; validate form using schema
+                        (formic-frontend/uncollapse
+                         form-state (get-in err [:node :path]))
+                        (formic-frontend/focus-error)))}
+         "Validate all"]]
+       [page-template/page
+        (formic-field/serialize form-state)] ;; serialize form state
+       ])))
 ```
 
 ## License
