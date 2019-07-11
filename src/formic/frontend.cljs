@@ -150,22 +150,17 @@
                                   path
                                   next
                                   field-type))}
-       [:span.plus "+"] (or
-                         (get-in schema [:compound field-type :title])
-                         (formic-util/format-kw field-type))]])])
+       [:span.plus "+"]
+       (or
+        (get-in schema [:compound field-type :title])
+        (formic-util/format-kw field-type))]])])
 
 (defn flexible-field [{:keys [state errors compound schema] :as params} f path]
   (let [next (r/atom (or (count (:value (get-in @state path))) 0))
-        {:keys [classes
-                flex
-                validation]} f]
+        {:keys [classes flex]} f]
     (fn [{:keys [state compound] :as form-state} f path]
       (let [flexible-fields (r/cursor state (conj path :value))
-            value-path (filter #(not= :value) path)
-            touched (r/cursor state (conj path :touched))
-            err (r/track
-                 formic-field/validate-field
-                 state f path)]
+            err (r/track formic-field/validate-field state f path)]
         [(if @err
            :fieldset.formic-flex.formic-error
            :fieldset.formic-flex)
@@ -195,7 +190,6 @@
 (defn basic-field [{:keys [state errors] :as form-state} f path]
   (fn [{:keys [state errors] :as form-state} f path]
     (let [form-component (:component f)
-          value-path (filter #(not= :value) path)
           err            (r/track
                           formic-field/validate-field
                           state f path)
