@@ -27,7 +27,13 @@
                  formic-field/validate-field
                  state f path)]
         [:fieldset.formic-compound
-         {:class (:fieldset classes)}
+         {:class (if @err
+                   ((fnil conj [])
+                    (or
+                     (:err-fieldset classes)
+                     (:fieldset classes))
+                    :formic-error)
+                   (:fieldset classes))}
          [:h4.formic-compound-title
           {:class (:title classes)}
           (:title f)
@@ -161,11 +167,12 @@
     (fn [{:keys [state compound] :as form-state} f path]
       (let [flexible-fields (r/cursor state (conj path :value))
             err (r/track formic-field/validate-field state f path)]
-        [(if @err
-           :fieldset.formic-flex.formic-error
-           :fieldset.formic-flex)
+        [:fieldset.formic-flex
          {:class (if @err
-                   (:err-fieldset classes)
+                   ((fnil conj [])
+                    (or (:err-fieldset classes)
+                        (:fieldset classes))
+                    :formic-error)
                    (:fieldset classes))}
          [:div.formic-flex-fields-wrapper
           {:class (:fields-wrapper classes)

@@ -75,11 +75,10 @@
 (defn validate-field [state {:keys [validation]} path]
   (or (get-in (:errors state)
               (conj (filter #(not= :value path) path)))
-   (when (and validation (get-in @state (conj path :touched)))
-     (when-let [v (first (st/validate-single
-                          (get-in @state (conj path :value))
-                          validation))]
-       v))))
+      (when (and validation (get-in @state (conj path :touched)))
+        (first (st/validate-single
+                (get-in @state (conj path :value))
+                validation)))))
 
 (defn validate-all [form-state]
   (let [error-found (volatile! nil)]
@@ -87,11 +86,10 @@
      (tree-seq
       (fn validate-all-branch [node]
         (when-let
-            [err (and (:touched node)
-                      (first (st/validate-single (:value node)
-                                                 (:validation node))))]
-          (vreset! error-found {:node node
-                                :err err}))
+         [err (and (:touched node)
+                   (first (st/validate-single (:value node)
+                                              (:validation node))))]
+          (vreset! error-found {:node node :err err}))
         (and (not @error-found)
              (or
               (vector? node)
