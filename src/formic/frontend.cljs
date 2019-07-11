@@ -13,14 +13,19 @@
 
 (def flip-move (r/adapt-react-class js/FlipMove))
 
-(defn formic-compound-field [{:keys [state] :as form-state} f path]
-  (let [collapsable     (:collapsable f)
-        collapsed       (:collapsed f)
-        compound-schema (:schema f)
-        classes         (:classes f)
-        options         (:options f)]
+(defn formic-compound-field [{:keys [stat errors] :as form-state} f path]
+  (let [{:keys [collapsable
+                collapsed
+                compound-schema
+                validation
+                classes
+                options]} f]
     (fn [{:keys [state] :as form-state} f path]
-      (let [compound-error  (:err f)]
+      (let [value (get-in @state (conj path :value))
+            value-path (filter #(not= :value) path)
+            err (r/track
+                 formic-field/validate-field
+                 state f path)]
         [:fieldset.formic-compound
          {:class (:fieldset classes)}
          [:h4.formic-compound-title
@@ -45,10 +50,10 @@
                 [field form-state
                  (get-in @state (conj path :value n))
                  (conj path :value n)]]))])
-         (when @compound-error
+         (when @err
            [:ul.formic-compound-errors
             {:class (:errors-list classes)}
-            (for [[id e] @compound-error]
+            (for [[id e] @err]
               ^{:key id}
               [:li
                {:class (:errors-item classes)}
@@ -149,13 +154,18 @@
                          (get-in schema [:compound field-type :title])
                          (formic-util/format-kw field-type))]])])
 
-(defn flexible-field [{:keys [state compound schema] :as params} f path]
-  (let [next       (r/atom (or (count (:value (get-in @state path))) 0))
-        classes    (:classes f)
-        flex-types (:flex f)]
+(defn flexible-field [{:keys [state errors compound schema] :as params} f path]
+  (let [next (r/atom (or (count (:value (get-in @state path))) 0))
+        {:keys [classes
+                flex
+                validation]} f]
     (fn [{:keys [state compound] :as form-state} f path]
       (let [flexible-fields (r/cursor state (conj path :value))
-            err             (:err (get-in @state path))]
+            value-path (filter #(not= :value) path)
+            touched (r/cursor state (conj path :touched))
+            err (r/track
+                 formic-field/validate-field
+                 state f path)]
         [(if @err
            :fieldset.formic-flex.formic-error
            :fieldset.formic-flex)
@@ -169,7 +179,7 @@
            {:class (:title classes)}
            (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
           [formic-flex-fields params f flexible-fields path]]
-         [formic-flex-add params (:add classes) flex-types next f path]
+         [formic-flex-add params (:add classes) flex next f path]
          (when @err
            [:div.error-wrapper
             {:class (:err-wrapper classes)}
@@ -185,18 +195,17 @@
 (defn basic-field [{:keys [state errors] :as form-state} f path]
   (fn [{:keys [state errors] :as form-state} f path]
     (let [form-component (:component f)
-          err           #_ (r/track (fn []
-                                    (or (get @errors (:value-path f))
-                                        (formic-field/validate-field (get-in @state path)))))
-          (:err f)
-          value          (:value f)
+          value-path (filter #(not= :value) path)
+          err            (r/track
+                          formic-field/validate-field
+                          state f path)
+          value          (r/cursor state (conj path :value))
           touched        (r/cursor state (conj path :touched))
           final-f        (assoc f
                                 :path path
                                 :touched touched
                                 :value value
                                 :err err)]
-
       [:div.formic-field
        {:class (when @err "formic-error")}
        (when form-component [form-component final-f])])))
