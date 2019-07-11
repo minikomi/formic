@@ -185,10 +185,11 @@
 (defn basic-field [{:keys [state errors] :as form-state} f path]
   (fn [{:keys [state errors] :as form-state} f path]
     (let [form-component (:component f)
-          err            (r/track (fn []
+          err           #_ (r/track (fn []
                                     (or (get @errors (:value-path f))
                                         (formic-field/validate-field (get-in @state path)))))
-          value          (r/cursor state (conj path :value))
+          (:err f)
+          value          (:value f)
           touched        (r/cursor state (conj path :touched))
           final-f        (assoc f
                                 :path path

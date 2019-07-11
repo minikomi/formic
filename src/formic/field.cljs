@@ -6,14 +6,15 @@
             [clojure.walk :as w]
             [clojure.string :as str]
             [cljs.pprint :refer [pprint]]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [clojure.walk :as walk]))
+
+(enable-console-print!)
 
 ;; third party components
 ;; -------------------------------------------------------------
 
 (def registered-components (atom {}))
-
-(enable-console-print!)
 
 (defn register-component [component-name component]
   (println "Registering:" component-name)
@@ -74,7 +75,7 @@
 
 (defn validate-field [{:keys [validation touched value id]}]
   (when (and touched validation)
-    (when-let [v (first (st/validate-single value validation))] 
+    (when-let [v (first (st/validate-single @value validation))]
       v)))
 
 (defn remove-untouched [value]
@@ -98,27 +99,6 @@
     (let [values (mapv #(into {} (map (juxt :id :value) (:value %))) value)]
       (first
        (st/validate-single values validation)))))
-
-(defn dissoc-by-val [pred m]
-  (into {} (filter (fn [[k v]] (not (pred v)))) m))
-
-(defn remove-regular-keys [field]
-  (dissoc field
-          :serializer
-          :id
-          :type
-          :options
-          :classes
-          :label
-          :default
-          :choices
-          :value
-          :value-path
-          :path
-          :touched
-          :validation
-          :err
-          :component))
 
 (defn validate-all [form-state]
   (let [error-found (volatile! nil)]
@@ -169,7 +149,7 @@
                        (:choices f))
               (ffirst (:choices f))))
         raw-initial-value
-        (get-in values value-path)
+        (get-in @values value-path)
         parser
         (or (:parser f)
             (get-in schema [:parsers (:type f)])
@@ -201,13 +181,21 @@
         (or
          (get-in f [:classes])
          (get-in schema [:classes :fields (:type f)]))
+        value (r/cursor values value-path)
+        err (r/track (fn []
+                       (or (get @errors value-path)
+                           (when (and (get-in @state (conj path :touched))
+                                      validation)
+                             (when-let [v (first (st/validate-single @value validation))]
+                               v)))))
         full-f
         (merge f
-               {:value      parsed-value
+               {:value      value
                 :title (or (:title f)
                            (str/capitalize (formic-util/format-kw (:id f))))
                 :value-path value-path
                 :path       path
+                :err        err
                 :component  component
                 :classes    classes
                 :options    options
@@ -238,6 +226,7 @@
                         (validate-compound
                          validation
                          (get-in @state (conj path :value))))))
+        compound-value (r/cursor values value-path)
         full-f  {:id (:id f)
                  :title (or (:title f)
                             (:title compound-schema)
@@ -262,7 +251,10 @@
                          (update :value-path conj (:id f)))))))
 
 (defn prepare-field-flexible [{:keys [schema values errors state f path value-path] :as params}]
-  (let [flex-values (or (not-empty (get-in values value-path)) [])
+  ;; ensure empty array when flex has no value
+  (when-not (not-empty (get-in @values value-path))
+    (swap! values assoc-in value-path []))
+  (let [flex-values (r/cursor values value-path)
         classes (or (get-in f [:classes])
                     (get-in schema [:classes :flex]))
         options (or (get-in f [:options])
@@ -282,14 +274,14 @@
                       :classes classes
                       :options options
                       :title (:title f)
-                      :value flex-values
+                      :value @flex-values
                       :value-path value-path
                       :path path
                       :err err
                       :touched touched}]
     (update-state! state path full-f)
-    (doseq [n (range (count flex-values))
-            :let [ff (get flex-values n)]]
+    (doseq [n (range (count @flex-values))
+            :let [ff (get @flex-values n)]]
       (let [field-type (keyword (:compound ff))
             field-id   (keyword (str (name (:id f)) "-" n "-" (name field-type)))]
         (prepare-field (-> params
@@ -311,9 +303,10 @@
   ;; errors-map : server side errors map of path to err
   ([form-schema values]
    (prepare-state form-schema values nil))
-  ([form-schema values initial-err]
+  ([form-schema initial-values initial-err]
    (let [errors (r/atom nil)
-         state (r/atom [])]
+         state (r/atom [])
+         values (r/atom initial-values)]
      (doseq [n (range (count (:fields form-schema)))
              :let [f (get (:fields form-schema) n)]]
        (prepare-field
@@ -331,6 +324,7 @@
      (reset! errors initial-err)
      {:errors errors
       :state state
+      :values values
       :schema form-schema})))
 
 ;; flex

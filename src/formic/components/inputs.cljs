@@ -12,11 +12,11 @@
     :else         cls))
 
 (defn error-label [f]
-    (fn [f]
-     (let [err (:err f)
-           classes (get-in f [:classes :err-label])]
-       (when @err
-         [:h3 {:class classes} @err]))))
+  (fn [f]
+    (let [err (:err f)
+          classes (get-in f [:classes :err-label])]
+      (when @err
+        [:h3 {:class classes} @err]))))
 
 (defn common-wrapper [{:keys [classes id type] :as f} body]
   (fn [{:keys [classes id type] :as f} body]
@@ -54,8 +54,8 @@
               :checkbox "checkbox"
               "text")
       :class (add-cls
-               (get classes (if @err :err-input :input))
-               (when @err "error"))
+              (get classes (if @err :err-input :input))
+              (when @err "error"))
       :on-change
       (fn input-on-change [ev]
         (let [v (cond (= (:type f) :checkbox)
