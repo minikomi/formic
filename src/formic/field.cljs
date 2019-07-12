@@ -109,6 +109,11 @@
 
 (declare prepare-field)
 
+(defn gen-f-title [f]
+  (or (:title f)
+      (str/capitalize (formic-util/format-kw (:id f)))
+      (str/capitalize (formic-util/format-kw (:field-type f)))))
+
 (defn update-state! [state path full-f]
   (if (and (number? (peek path))
            (not (get-in @state path)))
@@ -163,104 +168,86 @@
                                   :touched    touched})]
     (update-state! state path full-f)))
 
-(defn prepare-field-compound [{:keys [schema values state f path value-path] :as params}]
-  (let [compound-type   (keyword (:compound f))
-        classes         (or (get-in f [:classes])
-                            (get-in schema [:classes :compound]))
-        compound-schema (get-in schema [:compound compound-type])
-        compound-fields (:fields compound-schema)
-        serializer      (or
-                         (get-in schema [:compound compound-type :serializer])
-                         (get-in schema [:serializers compound-type])
-                         identity)
-        validation      (get-in schema [:compound compound-type :validation])
-        options         (merge (get-in schema [:options :compound])
-                               (:options compound-schema))
+(defn prepare-field-compound [{:keys [schema state values f path value-path] :as params}]
+  (let [id              (:id f)
+        classes         (or (:classes f) (get-in schema [:classes :compound]))
+        compound-fields (:fields f)
+        serializer      (or (:serializer f) identity)
+        validation      (:validation f)
+        options         (merge (get-in schema [:options :compound]) (:options f))
         collapsable     (:collapsable options)
-        collapsed       (when collapsable
-                          (r/atom (:default-collapsed options)))
-        full-f          {:id              (:id f)
-                         :title           (or (:title f)
-                                              (:title compound-schema)
-                                              (str/capitalize (formic-util/format-kw (:id f)))
-                                              (str/capitalize (formic-util/format-kw (:compound f))))
-                         :classes         classes
-                         :compound-schema compound-schema
-                         :collapsed       collapsed
-                         :collapsable     collapsable
-                         :value           []
-                         :validation      validation
-                         :compound        compound-type
-                         :serializer      serializer}]
-    (update-state! state path full-f)
+        collapsed       (when collapsable (boolean (:default-collapsed options)))]
+    (update-state! state path
+                   {:id              (:id f)
+                    :field-type      (:field-type f)
+                    :title           (gen-f-title f)
+                    :classes         classes
+                    :compound-fields compound-fields
+                    :collapsed       collapsed
+                    :collapsable     collapsable
+                    :value           []
+                    :validation      validation
+                    :serializer      serializer})
     (doseq [n    (range (count compound-fields))
-            :let [f (get compound-fields n)]]
-      (prepare-field (-> params
-                         (assoc :f f)
-                         (update :path conj :value n)
-                         (update :value-path conj (:id f)))))))
+            :let [f (get compound-fields n)
+                  params (assoc params
+                                :f f
+                                :path (conj path :value n)
+                                :value-path (conj value-path (:id f)))]]
+      (prepare-field params))))
 
 (defn prepare-field-flexible [{:keys [schema values state f path value-path] :as params}]
-  (let [classes     (or (get-in f [:classes])
-                        (get-in schema [:classes :flex]))
-        options     (or (get-in f [:options])
-                        (get-in schema [:options :flex]))
+  (let [classes     (or (:classes f) (get-in schema [:classes :flex]))
+        options     (merge (get-in schema [:options :flex]) (:options f))
         validation  (:validation f)
         flex-values (or (not-empty (get-in values value-path)) [])
-        touched     (not= [] flex-values)
-        full-f      {:id         (:id f)
-                     :flex       (:flex f)
-                     :classes    classes
-                     :options    options
-                     :title      (:title f)
-                     :value      flex-values
-                     :validation validation
-                     :touched    touched}]
-    (update-state! state path full-f)
+        touched     (not= [] flex-values)]
+    (update-state! state path
+                   {:id         (:id f)
+                    :flex       (:flex f)
+                    :title      (gen-f-title f)
+                    :classes    classes
+                    :options    options
+                    :value      flex-values
+                    :validation validation
+                    :touched    touched})
     (doseq [n    (range (count flex-values))
-            :let [ff (get flex-values n)]]
-      (let [field-type (keyword (:compound ff))
-            field-id   (keyword (str (name (:id f)) "-" n "-" (name field-type)))]
-        (prepare-field (-> params
-                           (assoc :f (assoc ff
-                                            :id field-id))
-                           (update :path conj :value n)
-                           (update :value-path conj n)))))))
+            :let [ff (get flex-values n)
+                  field-type (keyword (:field-type ff))]]
+      (let [field-id    (keyword (str/join "-" [(name (:id f)) n (name field-type)]))
+            ff     (assoc ff :id field-id)
+            params (assoc params
+                          :f ff
+                          :path (conj path :value n)
+                          :value-path (conj value-path n))]
+        (prepare-field params)))))
 
-(defn prepare-field [{:keys [f] :as params}]
+(defn prepare-field [{:keys [schema f] :as params}]
   (cond
-    (:compound f)
-    (prepare-field-compound params)
-    (:flex f)
-    (prepare-field-flexible params)
-    :else
-    (prepare-field-basic params)))
+    (:fields f)     (prepare-field-compound params)
+    (:flex f)       (prepare-field-flexible params)
+    (:field-type f) (if-let [user-field-schema (get-in schema [:field-types (:field-type f)])]
+                      (prepare-field (assoc params f (merge user-field-schema f)))
+                      (prepare-field-basic params))))
 
 (defn prepare-state
   ;; errors-map : server side errors map of path to err
-  ([form-schema values]
-   (prepare-state form-schema values nil))
-  ([form-schema values initial-err]
-   (let [errors (r/atom nil)
-         state (r/atom [])]
-     (doseq [n (range (count (:fields form-schema)))
-             :let [f (get (:fields form-schema) n)]]
-       (prepare-field
-        {:schema form-schema
-         :values values
-         :errors errors
-         :state state
-         :path [n]
-         :value-path [(:id f)]
-         :f f}))
-     ;; reset errors to nil when state changes
-     (r/track! (fn []
-                 (and @state
-                      (reset! errors nil))))
-     (reset! errors initial-err)
-     {:errors errors
-      :state state
-      :schema form-schema})))
+  [form-schema]
+  (let [errors (r/atom nil)
+        state (r/atom [])]
+    (doseq [n (range (count (:fields form-schema)))
+            :let [f (get (:fields form-schema) n)]]
+      (prepare-field
+       {:schema form-schema
+        :errors errors
+        :state state
+        :path [n]
+        :value-path [(:id f)]
+        :f f}))
+    (reset! errors (:errors form-schema))
+    {:errors errors
+     :state state
+     :schema form-schema}))
 
 ;; flex
 ;; --------------------------------------------------------------
@@ -269,7 +256,7 @@
   (let [new-field-id (str (name (:id f)) "-" @next "-" (name field-type))
         new-field {:id new-field-id
                    :title (formic-util/format-kw field-type)
-                   :compound field-type}
+                   :_field-type field-type}
         n         (count (get-in @(:state params) (conj path :value)))
         new-field-path (conj path :value n)
         new-value-path (conj (:value-path f) n)]
@@ -280,7 +267,7 @@
            update-in (conj path :value)
            formic-util/conjv
            new-field)
-    (prepare-field-compound
+    (prepare-field
      (assoc params
             :f new-field
             :path new-field-path
