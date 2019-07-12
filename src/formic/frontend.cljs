@@ -16,7 +16,6 @@
 (defn formic-compound-field [{:keys [stat errors] :as form-state} f path]
   (let [{:keys [collapsable
                 collapsed
-                compound-schema
                 validation
                 classes
                 options]} f]
@@ -49,7 +48,7 @@
            [:ul.formic-formic-compound-fields
             {:class (:fields-list classes)}
             (doall
-             (for [n (range (count (:fields compound-schema)))]
+             (for [n (range (count value))]
                ^{:key n}
                [:li
                 {:class (:fields-item classes)}

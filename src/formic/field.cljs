@@ -126,47 +126,40 @@
 
 (defn prepare-field-basic [{:keys [schema values state f path value-path] :as params}]
   (let [default-value     (or (:default f)
-                              (get-in schema [:defaults (:type f)])
-                              (when (and (or (= (:type f) :select)
-                                             (= (:type f) :radios))
-                                         (:choices f))
+                              (get-in schema [:defaults (:field-type f)])
+                              (when (and (:choices f)
+                                         (map? f))
                                 (ffirst (:choices f))))
         raw-initial-value (get-in values value-path)
         parser            (or (:parser f)
-                              (get-in schema [:parsers (:type f)])
-                              (get-in @registered-components [(:type f) :parser])
+                              (get-in schema [:parsers (:field-type f)])
                               identity)
-        parsed-value      (if (not (nil? raw-initial-value))
-                            (parser raw-initial-value) default-value)
-        options           (or
-                           (:options f)
-                           (get-in schema [:options :fields (:type f)])
-                           (get-in @registered-components [(:type f) :options])
-                           nil)
+        parsed-value      (if (nil? raw-initial-value)
+                            default-value
+                            (parser raw-initial-value))
+        options           (merge
+                           (get-in schema [:options :fields (:field-type f)])
+                           (:options f))
         serializer        (or (:serializer f)
-                              (get-in schema [:serializers (:type f)])
-                              (get-in @registered-components [(:type f) :serializer])
+                              (get-in schema [:serializers (:field-type f)])
                               identity)
         touched           (not (nil? raw-initial-value))
         component         (or (:component f)
-                              (get-in schema [:components (:type f)])
-                              (get-in @registered-components [(:type f) :component])
-                              (get formic-inputs/default-components (:type f))
+                              (get formic-inputs/default-components (:field-type f))
                               formic-inputs/unknown-field)
         validation        (:validation f)
-        classes           (or
-                           (get-in f [:classes])
-                           (get-in schema [:classes :fields (:type f)]))
-        full-f            (merge f
-                                 {:value      parsed-value
-                                  :title      (or (:title f)
-                                                  (str/capitalize (formic-util/format-kw (:id f))))
-                                  :component  component
-                                  :classes    classes
-                                  :options    options
-                                  :serializer serializer
-                                  :touched    touched})]
-    (update-state! state path full-f)))
+        classes           (or (:classes f)
+                              (get-in schema [:classes :fields (:field-type f)]))]
+    (update-state! state path
+                   (merge f
+                          {:value      parsed-value
+                           :title      (or (:title f)
+                                           (str/capitalize (formic-util/format-kw (:id f))))
+                           :component  component
+                           :classes    classes
+                           :options    options
+                           :serializer serializer
+                           :touched    touched}))))
 
 (defn prepare-field-compound [{:keys [schema state values f path value-path] :as params}]
   (let [id              (:id f)
@@ -179,10 +172,10 @@
         collapsed       (when collapsable (boolean (:default-collapsed options)))]
     (update-state! state path
                    {:id              (:id f)
+                    :compound        true
                     :field-type      (:field-type f)
                     :title           (gen-f-title f)
                     :classes         classes
-                    :compound-fields compound-fields
                     :collapsed       collapsed
                     :collapsable     collapsable
                     :value           []
