@@ -187,18 +187,6 @@
 (defn hidden [f]
   [:input {:type "hidden" :value @(:value f)}])
 
-(def default-components
-  {:string     validating-input
-   :email      validating-input
-   :number     validating-input
-   :range      validating-input
-   :checkbox   validating-input
-   :select     validating-select
-   :radios     radio-select
-   :text       validating-textarea
-   :checkboxes validating-checkboxes
-   :hidden     hidden})
-
 (defn unknown-field [f]
   [:h4 "Unknown:"
    [:pre (with-out-str

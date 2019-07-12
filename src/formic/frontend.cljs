@@ -227,6 +227,7 @@
 (defn fields [form-state]
   (let [state (:state form-state)]
     [:div.formic-fields
+     {:class (get-in state [:classes :fields-wrapper])}
      (doall
       (for [n (range (count @state))]
         ^{:key n}

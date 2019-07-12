@@ -146,7 +146,6 @@
                               identity)
         touched           (not (nil? raw-initial-value))
         component         (or (:component f)
-                              (get formic-inputs/default-components (:field-type f))
                               formic-inputs/unknown-field)
         validation        (:validation f)
         classes           (or (:classes f)
@@ -226,15 +225,33 @@
     (:fields f)     (prepare-field-compound params)
     (:flex f)       (prepare-field-flexible params)
     (:field-type f)
-    (if-let [user-field-schema (get-in schema [:field-types (:field-type f)])]
-      (prepare-field (assoc params :f (merge user-field-schema (dissoc f :field-type))))
-      (prepare-field-basic params))))
+    (let [field-type (:field-type f)
+          field-type-schema (if (map? field-type)
+                              field-type
+                              (get-in schema [:field-types (:field-type f)]))
+          f (-> field-type-schema (merge f) (dissoc :field-type))]
+     (prepare-field (assoc params :f f)))
+    :else (prepare-field-basic params)))
+
+(def default-field-types
+  {:string     {:component formic-inputs/validating-input}
+   :email      {:component formic-inputs/validating-input}
+   :number     {:component formic-inputs/validating-input}
+   :range      {:component formic-inputs/validating-input}
+   :checkbox   {:component formic-inputs/validating-input}
+   :select     {:component formic-inputs/validating-select}
+   :radios     {:component formic-inputs/radio-select}
+   :text       {:component formic-inputs/validating-textarea}
+   :checkboxes {:component formic-inputs/validating-checkboxes}
+   :hidden     {:component formic-inputs/hidden}})
 
 (defn prepare-state
   ;; errors-map : server side errors map of path to err
   [form-schema]
   (let [errors (r/atom nil)
-        state (r/atom [])]
+        state (r/atom [])
+        form-schema (update form-schema :field-types
+                           #(merge default-field-types %))]
     (doseq [n (range (count (:fields form-schema)))
             :let [f (get (:fields form-schema) n)]]
       (prepare-field
@@ -256,7 +273,7 @@
   (let [new-field-id (str (name (:id f)) "-" @next "-" (name field-type))
         new-field {:id new-field-id
                    :title (formic-util/format-kw field-type)
-                   :_field-type field-type}
+                   :field-type field-type}
         n         (count (get-in @(:state params) (conj path :value)))
         new-field-path (conj path :value n)
         new-value-path (conj (:value-path f) n)]
