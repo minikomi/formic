@@ -146,6 +146,7 @@
                               identity)
         touched           (not (nil? raw-initial-value))
         component         (or (:component f)
+                              (get-in schema [:components (:field-type f)])
                               formic-inputs/unknown-field)
         validation        (:validation f)
         classes           (or (:classes f)
@@ -224,16 +225,13 @@
   (cond
     (:fields f)     (prepare-field-compound params)
     (:flex f)       (prepare-field-flexible params)
-    (:field-type f)
-    (let [field-type (:field-type f)
-          field-type-schema (if (map? field-type)
-                              field-type
-                              (get-in schema [:field-types (:field-type f)]))
-          f (-> field-type-schema (merge f) (dissoc :field-type))]
+    (get-in schema [:field-types (:field-type f)])
+    (let [field-type-schema (get-in schema [:field-types (:field-type f)])
+          f (merge f field-type-schema)]
      (prepare-field (assoc params :f f)))
     :else (prepare-field-basic params)))
 
-(def default-field-types
+(def default-fields
   {:string     {:component formic-inputs/validating-input}
    :email      {:component formic-inputs/validating-input}
    :number     {:component formic-inputs/validating-input}
@@ -245,26 +243,37 @@
    :checkboxes {:component formic-inputs/validating-checkboxes}
    :hidden     {:component formic-inputs/hidden}})
 
+(defn add-field-to-schema [schema [field-type {:keys [component parser serializer]}]]
+  (println "Adding:" field-type)
+  (cond-> schema
+    component  (update :components assoc field-type component)
+    parser     (update :parsers assoc field-type parser)
+    serializer (update :serializers assoc field-type serializer)))
+
 (defn prepare-state
-  ;; errors-map : server side errors map of path to err
-  [form-schema]
-  (let [errors (r/atom nil)
-        state (r/atom [])
-        form-schema (update form-schema :field-types
-                           #(merge default-field-types %))]
-    (doseq [n (range (count (:fields form-schema)))
-            :let [f (get (:fields form-schema) n)]]
-      (prepare-field
-       {:schema form-schema
-        :errors errors
-        :state state
-        :path [n]
-        :value-path [(:id f)]
-        :f f}))
-    (reset! errors (:errors form-schema))
-    {:errors errors
-     :state state
-     :schema form-schema}))
+  ([form-schema]
+   (prepare-state form-schema {}))
+  ([form-schema {:keys [fields values errors] :as params}]
+   (println "PARAMS\n" params)
+   (let [error-atom (r/atom nil)
+         state (r/atom [])
+         form-schema (reduce add-field-to-schema
+                             form-schema
+                             (merge default-fields fields))]
+     (doseq [n (range (count (:fields form-schema)))
+             :let [f (get (:fields form-schema) n)]]
+       (prepare-field
+        {:schema form-schema
+         :values values
+         :errors errors
+         :state state
+         :path [n]
+         :value-path [(:id f)]
+         :f f}))
+     (reset! error-atom errors)
+     {:errors error-atom
+      :state state
+      :schema form-schema})))
 
 ;; flex
 ;; --------------------------------------------------------------
