@@ -13,7 +13,7 @@
 
 (def flip-move (r/adapt-react-class js/FlipMove))
 
-(defn formic-compound-field [{:keys [stat errors] :as form-state} f path]
+(defn formic-compound-field [{:keys [state errors] :as form-state} f path value-path]
   (let [{:keys [collapsable
                 collapsed
                 validation
@@ -21,12 +21,10 @@
                 options]} f]
     (fn [{:keys [state] :as form-state} f path]
       (let [value (get-in @state (conj path :value))
-            value-path (filter #(not= :value) path)
-            err (r/track
-                 formic-field/validate-field
-                 state f path)]
-        [:fieldset.formic-compound
-         {:class (if @err
+            err (formic-field/validate-field
+                 form-state f path value-path)]
+        [:fieldset.formic-compoud
+         {:class (if err
                    ((fnil conj [])
                     (or
                      (:err-fieldset classes)
@@ -48,23 +46,21 @@
            [:ul.formic-formic-compound-fields
             {:class (:fields-list classes)}
             (doall
-             (for [n (range (count value))]
+             (for [n (range (count value))
+                   :let [f (get-in @state (conj path :value n))]]
                ^{:key n}
                [:li
                 {:class (:fields-item classes)}
                 [field form-state
-                 (get-in @state (conj path :value n))
-                 (conj path :value n)]]))])
-         (when @err
-           [:ul.formic-compound-errors
-            {:class (:errors-list classes)}
-            (for [[id e] @err]
-              ^{:key id}
-              [:li
-               {:class (:errors-item classes)}
-               [:h4.error
-                {:class (:error classes)}
-                [:strong (formic-util/format-kw id)] ": " e]])])]))))
+                 f
+                 (conj path :value n)
+                 (conj value-path (:id f))]]))])
+         (when err
+           [:div.error-wrapper
+            {:class (:err-wrapper classes)}
+            [:h4.error
+             {:class (:err-label classes)}
+             err]])]))))
 
 (defn flexible-controls [classes flexible-fields n]
   (let [is-first (= n 0)
@@ -120,7 +116,7 @@
    :leave-animation false
    :enter-animation "fade"})
 
-(defn formic-flex-fields [{:keys [state] :as params} f flexible-fields path]
+(defn formic-flex-fields [{:keys [state] :as params} f flexible-fields path value-path]
   (let [classes (:classes f)]
     (fn [{:keys [state] :as params} f flexible-fields path]
       [:ul.formic-flex-fields
@@ -156,18 +152,17 @@
                                   next
                                   field-type))}
        [:span.plus "+"]
-       (or
-        (get-in schema [:compound field-type :title])
-        (formic-util/format-kw field-type))]])])
+       (formic-util/format-kw field-type)]])])
 
-(defn flexible-field [{:keys [state errors compound schema] :as params} f path]
+(defn flexible-field [{:keys [state errors compound schema] :as params} f path value-path]
   (let [next (r/atom (or (count (:value (get-in @state path))) 0))
         {:keys [classes flex]} f]
     (fn [{:keys [state compound] :as form-state} f path]
       (let [flexible-fields (r/cursor state (conj path :value))
-            err (r/track formic-field/validate-field state f path)]
+            err (formic-field/validate-field
+                 form-state f path value-path)]
         [:fieldset.formic-flex
-         {:class (if @err
+         {:class (if err
                    ((fnil conj [])
                     (or (:err-fieldset classes)
                         (:fieldset classes))
@@ -181,44 +176,44 @@
            (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
           [formic-flex-fields params f flexible-fields path]]
          [formic-flex-add params (:add classes) flex next f path]
-         (when @err
+         (when err
            [:div.error-wrapper
             {:class (:err-wrapper classes)}
             [:h4.error
              {:class (:err-label classes)}
-             @err]])]))))
+             err]])]))))
 
 (defn unknown-field [f]
   [:h4 "Unknown:"
    [:pre (with-out-str
            (pprint f))]])
 
-(defn basic-field [{:keys [state errors] :as form-state} f path]
+(defn basic-field [{:keys [state errors] :as form-state} f path value-path]
   (fn [{:keys [state errors] :as form-state} f path]
     (let [form-component (:component f)
-          err            (r/track
-                          formic-field/validate-field
-                          state f path)
+          err            (formic-field/validate-field
+                          form-state f path value-path)
           value          (r/cursor state (conj path :value))
           touched        (r/cursor state (conj path :touched))
           final-f        (assoc f
                                 :path path
+                                :value-path value-path
                                 :touched touched
                                 :value value
                                 :err err)]
       [:div.formic-field
-       {:class (when @err "formic-error")}
+       {:class (when err "formic-error")}
        (when form-component [form-component final-f])])))
 
-(defn field [form-state f path]
-  (fn [form-state f path]
+(defn field [form-state f path value-path]
+  (fn [form-state f path value-path]
     (cond
       (:flex f)
-      [flexible-field form-state f path]
+      [flexible-field form-state f path value-path]
       (:compound f)
-      [formic-compound-field form-state f path]
+      [formic-compound-field form-state f path value-path]
       :else
-      [basic-field form-state f path])))
+      [basic-field form-state f path value-path])))
 
 (defn debug-state [{:keys [state]}]
   (when goog.DEBUG
@@ -229,9 +224,10 @@
     [:div.formic-fields
      {:class (get-in state [:classes :fields-wrapper])}
      (doall
-      (for [n (range (count @state))]
+      (for [n (range (count @state))
+            :let [f (get @state n)]]
         ^{:key n}
-        [field form-state (get-in @state [n]) [n]]))]))
+        [field form-state f [n] [(:id f)]]))]))
 
 (defn uncollapse [{:keys [state]} path]
   (doseq [n (range (count path))

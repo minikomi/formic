@@ -72,13 +72,16 @@
 ;; error handling
 ;; --------------------------------------------------------------
 
-(defn validate-field [state {:keys [validation]} path]
-  (or (get-in (:errors state)
-              (conj (filter #(not= :value path) path)))
-      (when (and validation (get-in @state (conj path :touched)))
-        (first (st/validate-single
-                (get-in @state (conj path :value))
-                validation)))))
+(defn validate-field [{:keys [errors state]} {:keys [validation compound touched flex value]} path value-path]
+  (or (get @errors value-path)
+      (when (and validation (or compound touched))
+        (let [shallow-value (cond
+                              compound (into {} (map (juxt :id :value) value))
+                              flex (map :value value)
+                              :else value)]
+          (first (st/validate-single
+                  shallow-value
+                  validation))))))
 
 (defn validate-all [form-state]
   (let [error-found (volatile! nil)]
@@ -125,7 +128,7 @@
     (swap! state assoc-in path full-f)))
 
 (defn prepare-field-basic [{:keys [schema values state f path value-path] :as params}]
-  (println "basic")
+  (println "basic" path value-path)
   (let [default-value     (or (:default f)
                               (get-in schema [:defaults (:field-type f)])
                               (when (and (:choices f)
@@ -188,16 +191,15 @@
                   params (assoc params
                                 :f cf
                                 :path (conj path :value n)
-                                :value-path (conj value-path (:id f)))]]
-      (println (:path params) cf)
+                                :value-path (conj value-path (:id cf)))]]
       (prepare-field params))))
 
 (defn prepare-field-flexible [{:keys [schema values state f path value-path] :as params}]
-  (println "flexible")
   (let [classes     (or (:classes f) (get-in schema [:classes :flex]))
         options     (merge (get-in schema [:options :flex]) (:options f))
         validation  (:validation f)
-        flex-values (or (not-empty (get-in values value-path)) [])
+        raw-flex-values  (get-in values value-path)
+        flex-values (if (vector? raw-flex-values) raw-flex-values [])
         touched     (not= [] flex-values)]
     (update-state! state path
                    {:id         (:id f)
@@ -220,15 +222,13 @@
         (prepare-field params)))))
 
 (defn prepare-field [{:keys [schema f] :as params}]
-  (println "----")
-  (pprint f)
   (cond
     (:fields f)     (prepare-field-compound params)
     (:flex f)       (prepare-field-flexible params)
     (get-in schema [:field-types (:field-type f)])
     (let [field-type-schema (get-in schema [:field-types (:field-type f)])
           f (merge f field-type-schema)]
-     (prepare-field (assoc params :f f)))
+      (prepare-field (assoc params :f f)))
     :else (prepare-field-basic params)))
 
 (def default-fields
@@ -244,7 +244,6 @@
    :hidden     {:component formic-inputs/hidden}})
 
 (defn add-field-to-schema [schema [field-type {:keys [component parser serializer]}]]
-  (println "Adding:" field-type)
   (cond-> schema
     component  (update :components assoc field-type component)
     parser     (update :parsers assoc field-type parser)
@@ -253,8 +252,7 @@
 (defn prepare-state
   ([form-schema]
    (prepare-state form-schema {}))
-  ([form-schema {:keys [fields values errors] :as params}]
-   (println "PARAMS\n" params)
+  ([form-schema {:keys [fields values errors]}]
    (let [error-atom (r/atom nil)
          state (r/atom [])
          form-schema (reduce add-field-to-schema
@@ -270,7 +268,14 @@
          :path [n]
          :value-path [(:id f)]
          :f f}))
-     (reset! error-atom errors)
+     (r/track! (fn []
+                 (println "RESET ERROR ")
+                 (and @state
+                      (reset! error-atom nil))))
+
+     (do
+       (println "SET ERROR ")
+       (reset! error-atom errors))
      {:errors error-atom
       :state state
       :schema form-schema})))
