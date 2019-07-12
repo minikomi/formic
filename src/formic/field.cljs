@@ -125,6 +125,7 @@
     (swap! state assoc-in path full-f)))
 
 (defn prepare-field-basic [{:keys [schema values state f path value-path] :as params}]
+  (println "basic")
   (let [default-value     (or (:default f)
                               (get-in schema [:defaults (:field-type f)])
                               (when (and (:choices f)
@@ -162,6 +163,7 @@
                            :touched    touched}))))
 
 (defn prepare-field-compound [{:keys [schema state values f path value-path] :as params}]
+  (println "compound")
   (let [id              (:id f)
         classes         (or (:classes f) (get-in schema [:classes :compound]))
         compound-fields (:fields f)
@@ -182,14 +184,16 @@
                     :validation      validation
                     :serializer      serializer})
     (doseq [n    (range (count compound-fields))
-            :let [f (get compound-fields n)
+            :let [cf (get compound-fields n)
                   params (assoc params
-                                :f f
+                                :f cf
                                 :path (conj path :value n)
                                 :value-path (conj value-path (:id f)))]]
+      (println (:path params) cf)
       (prepare-field params))))
 
 (defn prepare-field-flexible [{:keys [schema values state f path value-path] :as params}]
+  (println "flexible")
   (let [classes     (or (:classes f) (get-in schema [:classes :flex]))
         options     (merge (get-in schema [:options :flex]) (:options f))
         validation  (:validation f)
@@ -216,12 +220,15 @@
         (prepare-field params)))))
 
 (defn prepare-field [{:keys [schema f] :as params}]
+  (println "----")
+  (pprint f)
   (cond
     (:fields f)     (prepare-field-compound params)
     (:flex f)       (prepare-field-flexible params)
-    (:field-type f) (if-let [user-field-schema (get-in schema [:field-types (:field-type f)])]
-                      (prepare-field (assoc params f (merge user-field-schema f)))
-                      (prepare-field-basic params))))
+    (:field-type f)
+    (if-let [user-field-schema (get-in schema [:field-types (:field-type f)])]
+      (prepare-field (assoc params :f (merge user-field-schema (dissoc f :field-type))))
+      (prepare-field-basic params))))
 
 (defn prepare-state
   ;; errors-map : server side errors map of path to err
