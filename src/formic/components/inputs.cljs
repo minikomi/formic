@@ -61,7 +61,7 @@
         (let [v (cond (= field-type :checkbox)
                       (boolean (.. ev -target -checked))
                       (= field-type :number)
-                      (not-empty (.. ev -target -value))
+                      (js/Number (not-empty (.. ev -target -value)))
                       :else
                       (.. ev -target -value))]
           (reset! value v)
@@ -79,6 +79,12 @@
       :on-blur
       (fn input-on-blur [ev]
         (reset! touched true)
+        (when (and (= field-type :number)
+                   (number? @value))
+          (when (> @value (:max options ##-Inf)
+                   (reset! value (:max options))))
+          (when (< @value (:min options ##Inf)
+                   (reset! value (:min options)))))
         (when-let  [f (:on-blur options)]
           (f ev)))
       :step (cond

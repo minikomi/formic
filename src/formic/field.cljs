@@ -279,13 +279,9 @@
          :value-path [(:id f)]
          :f f}))
      (r/track! (fn []
-                 (println "RESET ERROR ")
                  (and @state
                       (reset! error-atom nil))))
-
-     (do
-       (println "SET ERROR ")
-       (reset! error-atom errors))
+     (reset! error-atom errors)
      {:errors error-atom
       :state state
       :schema form-schema})))

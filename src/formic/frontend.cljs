@@ -186,8 +186,7 @@
 
 (defn unknown-field [f]
   [:h4 "Unknown:"
-   [:pre (with-out-str
-           (pprint f))]])
+   [:pre (with-out-str (pprint f))]])
 
 (defn basic-field [{:keys [state errors] :as form-state} f path value-path]
   (fn [{:keys [state errors] :as form-state} f path]
