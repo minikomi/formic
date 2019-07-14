@@ -51,6 +51,7 @@
                ^{:key n}
                [:li
                 {:class (:fields-item classes)}
+                [:pre (with-out-str (pprint f))]
                 [field form-state
                  f
                  (conj path :value n)
@@ -205,6 +206,15 @@
        {:class (when err "formic-error")}
        (when form-component [form-component final-f])])))
 
+(defn formic-view-field [{:keys [state components]} f path value-path]
+  (let [parent-value-path (pop path)
+        parent-values (->> (get-in @state parent-value-path)
+                           (map (juxt :id :value))
+                           (into {}))
+        view-values (map #(get parent-values % nil) (:view f))]
+    [:div.formic-view
+     (apply (:component f) view-values)]))
+
 (defn field [form-state f path value-path]
   (fn [form-state f path value-path]
     (cond
@@ -212,6 +222,8 @@
       [flexible-field form-state f path value-path]
       (:compound f)
       [formic-compound-field form-state f path value-path]
+      (:view f)
+      [formic-view-field form-state f path value-path]
       :else
       [basic-field form-state f path value-path])))
 

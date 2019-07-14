@@ -45,6 +45,7 @@
 (defn serialize-compound [{:keys [id compound value serializer] :as field}]
   (if serializer
     (as-> (:value field) v
+      (filter #(not (:view %)) v)
       (into {} (map #(vector (:id %) (-serialize %)) v))
       (serializer v)
       (when (not-empty v)
@@ -221,10 +222,19 @@
                           :value-path (conj value-path n))]
         (prepare-field params)))))
 
+(defn prepare-field-view [{:keys [state schema f path]}]
+  (update-state! state path
+                 (assoc f :component
+                        (or (:component f)
+                            (get-in schema [:components (:field-type f)])
+                            formic-inputs/unknown-field)
+                        )))
+
 (defn prepare-field [{:keys [schema f] :as params}]
   (cond
     (:fields f)     (prepare-field-compound params)
     (:flex f)       (prepare-field-flexible params)
+    (:view f)       (prepare-field-view params)
     (get-in schema [:field-types (:field-type f)])
     (let [field-type-schema (get-in schema [:field-types (:field-type f)])
           f (merge f field-type-schema)]

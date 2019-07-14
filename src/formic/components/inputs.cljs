@@ -18,8 +18,8 @@
       (when err
         [:h3 {:class classes} err]))))
 
-(defn common-wrapper [{:keys [classes id type] :as f} body]
-  (fn [{:keys [classes id type] :as f} body]
+(defn common-wrapper [{:keys [classes id field-type] :as f} body]
+  (fn [{:keys [classes id field-type] :as f} body]
     [:div.formic-input
      {:id (u/make-path-id f)}
      [(if (#{:email
@@ -28,14 +28,14 @@
              :select
              :checkbox
              :number
-             :range} type) :label :div)
+             :range} field-type) :label :div)
       [:h5.formic-input-title
        {:class (:title classes)}
        (:title f)]
       body
       [error-label f]]]))
 
-(defn make-attrs [{:keys [type
+(defn make-attrs [{:keys [field-type
                           options
                           value
                           err
@@ -47,7 +47,7 @@
      {:id path-id
       :name path-id
       :value (or @value "")
-      :type (case type
+      :type (case field-type
               :email "email"
               :number "number"
               :range "range"
@@ -58,9 +58,9 @@
               (when err "error"))
       :on-change
       (fn input-on-change [ev]
-        (let [v (cond (= (:type f) :checkbox)
+        (let [v (cond (= field-type :checkbox)
                       (boolean (.. ev -target -checked))
-                      (= (:type f) :number)
+                      (= field-type :number)
                       (not-empty (.. ev -target -value))
                       :else
                       (.. ev -target -value))]
@@ -68,11 +68,11 @@
           (when-let  [f (:on-change options)]
             (f ev))))
       :required (boolean ((set validation) st/required))
-      :checked (and (= type :checkbox)
+      :checked (and (= field-type :checkbox)
                     @value)
       :on-click
       (fn input-on-click [ev]
-        (if (= type :checkbox)
+        (if (= field-type :checkbox)
           (reset! touched true))
         (when-let  [f (:on-click options)]
           (f ev)))
@@ -83,19 +83,19 @@
           (f ev)))
       :step (cond
               (:step options) (:step options)
-              (= :number type) "any"
+              (= :number field-type) "any"
               :else nil)
       :min (:min options)
       :max (:max options)})))
 
-(defn validating-input [{:keys [type] :as f}]
+(defn validating-input [{:keys [field-type] :as f}]
   (let [options (:options f)
         classes (:classes f)]
     (fn [f]
       [common-wrapper f
        [:div.formic-input
         [:input (make-attrs f)]
-        (when (= type "range")
+        (when (= field-type "range")
           [:h6.formic-range-value
            {:class (:range-value classes)}
            @(:value f)])]])))
