@@ -81,9 +81,9 @@
         (reset! touched true)
         (when (and (= field-type :number)
                    (number? @value))
-          (when (> @value (:max options ##-Inf)
+          (when (> @value (:max options ##Inf)
                    (reset! value (:max options))))
-          (when (< @value (:min options ##Inf)
+          (when (< @value (:min options ##-Inf)
                    (reset! value (:min options)))))
         (when-let  [f (:on-blur options)]
           (f ev)))
