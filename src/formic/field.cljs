@@ -6,16 +6,6 @@
             [clojure.string :as str]
             [reagent.core :as r]))
 
-;; third party components
-;; -------------------------------------------------------------
-
-(def registered-components (atom {}))
-
-(defn register-component [component-name component]
-  (println "Registering:" component-name)
-  (swap! registered-components
-         assoc component-name component))
-
 ;; touch all
 ;; -------------------------------------------------------------
 
@@ -141,7 +131,6 @@
     (swap! state assoc-in path full-f)))
 
 (defn prepare-field-basic [{:keys [schema values state f path value-path] :as params}]
-  (println "basic" path value-path)
   (let [default-value     (or (:default f)
                               (get-in schema [:defaults (:field-type f)])
                               (when (and (:choices f)
@@ -178,7 +167,6 @@
                            :touched    touched}))))
 
 (defn prepare-field-compound [{:keys [schema state values f path value-path] :as params}]
-  (println "compound")
   (let [id              (:id f)
         classes         (or (:classes f) (get-in schema [:classes :compound]))
         compound-fields (:fields f)
