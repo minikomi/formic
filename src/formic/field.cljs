@@ -25,36 +25,43 @@
 
 (declare -serialize)
 
-(defn serialize-basic [{:keys [id serializer value]}]
-  (serializer value))
+(defn serialize-basic [{:keys [id field-type serializer value]}]
+    {:field-type field-type
+     :id id
+     :value (when (not (nil? value))
+              (serializer value))})
 
-(defn serialize-compound [{:keys [id compound value serializer] :as field}]
-  (if serializer
-    (as-> (:value field) v
-      (filter #(not (:view %)) v)
-      (into {} (map #(vector (:id %) (-serialize %)) v))
-      (serializer v)
-      (when (not-empty v)
-        (with-meta
-          (assoc v
-                 :compound (:compound field))
-          {:id (:id field)})))
-    field))
+(defn serialize-compound [{:keys [id value serializer field-type] :as field}]
+  {:id id
+   :field-type field-type
+   :value (as-> (:value field) v
+            (filter #(and (not (nil? (:value %)))
+                          (not (:view %))) v)
+            (map (juxt :id :value) v)
+            (into {} v)
+            (serializer v)
+            (when (not-empty v) v))})
 
-(defn serialize-flex [{:keys [value id]}]
-  (filterv identity (mapv -serialize value)))
+(defn serialize-flex [{:keys [value id] :as params}]
+  {:id id
+   :value (->> value
+               (mapv (fn [{:keys [field-type value]}]
+                       {:field-type field-type
+                        :value value}))
+               (filterv #(not-empty (:value %)))
+               not-empty)})
 
 (defn -serialize [field]
   (cond (and (:flex field) (:value field)) (serialize-flex field)
-        (and (:compound field) (:value field)) (serialize-compound field)
+        (:compound field) (serialize-compound field)
         (and (:serializer field) (contains? field :value)) (serialize-basic field)
-        (vector? field) (mapv -serialize field)
         :else field))
 
 (defn serialize [form-state]
-  (into {}
-        (map (juxt :id -serialize)
-             @(:state form-state))))
+  (->> (w/postwalk -serialize @(:state form-state))
+       (map (juxt :id :value))
+       (filter second)
+       (into {})))
 
 ;; error handling
 ;; --------------------------------------------------------------
