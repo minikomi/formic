@@ -153,8 +153,7 @@
                               (get-in schema [:components (:field-type f)])
                               formic-inputs/unknown-field)
         validation        (:validation f)
-        classes           (or (:classes f)
-                              (get-in schema [:classes :fields (:field-type f)]))]
+        classes           (or (:classes f) (get-in schema [:classes :fields (:field-type f)]))]
     (update-state! state path
                    (merge f
                           {:value      parsed-value
@@ -235,39 +234,40 @@
     (:fields f)     (prepare-field-compound params)
     (:flex f)       (prepare-field-flexible params)
     (:view f)       (prepare-field-view params)
-    (get-in schema [:field-types (:field-type f)])
+    (get-in schema  [:field-types (:field-type f)])
     (let [field-type-schema (get-in schema [:field-types (:field-type f)])
           f (merge f field-type-schema)]
       (prepare-field (assoc params :f f)))
     :else (prepare-field-basic params)))
 
-(def default-fields
-  {:string     {:component formic-inputs/validating-input}
-   :email      {:component formic-inputs/validating-input}
-   :number     {:component formic-inputs/validating-input}
-   :range      {:component formic-inputs/validating-input}
-   :checkbox   {:component formic-inputs/validating-input}
-   :select     {:component formic-inputs/validating-select}
-   :radios     {:component formic-inputs/radio-select}
-   :text       {:component formic-inputs/validating-textarea}
-   :checkboxes {:component formic-inputs/validating-checkboxes}
-   :hidden     {:component formic-inputs/hidden}})
-
-(defn add-field-to-schema [schema [field-type {:keys [component parser serializer]}]]
+(defn add-field-to-schema
+  "Adds field defined components, parsers, serializers, defaults, validation
+  into the main schema. Will respect previously defined versions
+  to allow override."
+  [schema [field-type {:keys [component parser default serializer validation]}]]
   (cond-> schema
-    component  (update :components assoc field-type component)
-    parser     (update :parsers assoc field-type parser)
-    serializer (update :serializers assoc field-type serializer)))
+    component  (update :components  formic-util/assoc-if-new field-type component)
+    parser     (update :parsers     formic-util/assoc-if-new field-type parser)
+    serializer (update :serializers formic-util/assoc-if-new field-type serializer)
+    default    (update :defaults    formic-util/assoc-if-new field-type default)
+    validation (update :validation  formic-util/assoc-if-new field-type validation)))
 
 (defn prepare-state
+  "Takes a form schema and optional options map and returns
+   a map contaning the original schema with options mixed in,
+   a global errors atom and the form state atom.
+
+  Options are:
+  Fields - a map of fields (:component, :parser, :serializer, :validation, :default keys)
+  Errors - starting global errors
+  Values - starting values for fields"
   ([form-schema]
    (prepare-state form-schema {}))
   ([form-schema {:keys [fields values errors]}]
    (let [error-atom (r/atom nil)
          state (r/atom [])
-         form-schema (reduce add-field-to-schema
-                             form-schema
-                             (merge default-fields fields))]
+         fields (merge formic-inputs/default-fields fields)
+         form-schema (reduce add-field-to-schema form-schema fields)]
      (doseq [n (range (count (:fields form-schema)))
              :let [f (get (:fields form-schema) n)]]
        (prepare-field
@@ -278,13 +278,13 @@
          :path [n]
          :value-path [(:id f)]
          :f f}))
-     (r/track! (fn []
+#_     (r/track! (fn []
                  (and @state
                       (reset! error-atom nil))))
      (reset! error-atom errors)
-     {:errors error-atom
-      :state state
-      :schema form-schema})))
+     {:schema form-schema
+      :errors error-atom
+      :state state})))
 
 ;; flex
 ;; --------------------------------------------------------------

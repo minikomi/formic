@@ -197,3 +197,15 @@
   [:h4 "Unknown:"
    [:pre (with-out-str
            (prn-str f))]])
+
+(def default-fields
+  {:string     {:component validating-input}
+   :email      {:component validating-input}
+   :number     {:component validating-input}
+   :range      {:component validating-input}
+   :checkbox   {:component validating-input}
+   :select     {:component validating-select}
+   :radios     {:component radio-select}
+   :text       {:component validating-textarea}
+   :checkboxes {:component validating-checkboxes}
+   :hidden     {:component hidden}})
