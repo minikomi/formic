@@ -1,14 +1,10 @@
 (ns formic.field
-  (:require [formic.validation :as fv]
-            [formic.util :as formic-util]
+  (:require [formic.util :as formic-util]
             [formic.components.inputs :as formic-inputs]
             [struct.core :as st]
             [clojure.walk :as w]
             [clojure.string :as str]
-            [cljs.pprint :refer [pprint]]
             [reagent.core :as r]))
-
-(enable-console-print!)
 
 ;; third party components
 ;; -------------------------------------------------------------
@@ -74,7 +70,9 @@
 ;; --------------------------------------------------------------
 
 (defn validate-field [{:keys [errors state]} {:keys [validation compound touched flex value]} path value-path]
-  (or (get @errors value-path)
+  (or (when-let [global-error (get @errors value-path)]
+        (swap! errors dissoc value-path)
+        global-error)
       (when (and validation (or compound touched))
         (let [shallow-value (cond
                               compound (into {} (map (juxt :id :value) value))
@@ -90,9 +88,9 @@
      (tree-seq
       (fn validate-all-branch [node]
         (when-let
-         [err (and (:touched node)
-                   (first (st/validate-single (:value node)
-                                              (:validation node))))]
+            [err (and (:touched node)
+                      (first (st/validate-single (:value node)
+                                                 (:validation node))))]
           (vreset! error-found {:node node :err err}))
         (and (not @error-found)
              (or

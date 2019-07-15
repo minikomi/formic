@@ -55,3 +55,7 @@
 (defn vmove [v a b]
   (let [vremoved (vremove v a)]
     (vinsert vremoved (v a) b)))
+
+(defn assoc-if-new [m k v]
+  (if (contains? m v) m
+      (assoc m k v)))
