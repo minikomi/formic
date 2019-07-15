@@ -13,13 +13,15 @@
 
 (def flip-move (r/adapt-react-class js/FlipMove))
 
+(defonce *debug* (r/atom false))
+
 (defn formic-compound-field [{:keys [state errors] :as form-state} f path value-path]
   (let [{:keys [collapsable
                 collapsed
                 validation
                 classes
                 options]} f]
-    (fn [{:keys [state] :as form-state} f path]
+    (fn [{:keys [state] :as form-state} f path value-path]
       (let [value (get-in @state (conj path :value))
             err (formic-field/validate-field
                  form-state f path value-path)]
@@ -51,7 +53,11 @@
                ^{:key n}
                [:li
                 {:class (:fields-item classes)}
-                [:pre (with-out-str (pprint f))]
+                (when @*debug*
+                  [:pre (with-out-str
+                         (pprint f)
+                         (pprint path)
+                         (pprint value-path))])
                 [field form-state
                  f
                  (conj path :value n)
@@ -119,19 +125,19 @@
 
 (defn formic-flex-fields [{:keys [state] :as params} f flexible-fields path value-path]
   (let [classes (:classes f)]
-    (fn [{:keys [state] :as params} f flexible-fields path]
+    (fn [{:keys [state] :as params} f flexible-fields path value-path]
       [:ul.formic-flex-fields
        {:class (:fields-list classes)}
        [flip-move
         (get-in f [:options :flip-move] DEFAULT_FLIP_MOVE_OPTIONS)
         (doall
-         (for [index (range (count @flexible-fields))
-               :let  [ff (get @flexible-fields index)]]
+         (for [n (range (count @flexible-fields))
+               :let  [ff (get @flexible-fields n)]]
            ^{:key (:id ff)}
            [:li.formic-flex-field
             {:class (:fields-item classes)}
-            [flexible-controls (:controls classes) flexible-fields index]
-            [field params ff (conj path :value index)]]))]])))
+            [flexible-controls (:controls classes) flexible-fields n]
+            [field params ff (conj path :value n) (conj value-path n)]]))]])))
 
 (defn formic-flex-add [{:keys [state schema] :as params}
                        classes flex-types next f path]
@@ -158,7 +164,7 @@
 (defn flexible-field [{:keys [state errors compound schema] :as params} f path value-path]
   (let [next (r/atom (or (count (:value (get-in @state path))) 0))
         {:keys [classes flex]} f]
-    (fn [{:keys [state compound] :as form-state} f path]
+    (fn [{:keys [state compound] :as form-state} f path value-path]
       (let [flexible-fields (r/cursor state (conj path :value))
             err (formic-field/validate-field
                  form-state f path value-path)]
@@ -175,7 +181,7 @@
           [:h4.formic-flex-title
            {:class (:title classes)}
            (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
-          [formic-flex-fields params f flexible-fields path]]
+          [formic-flex-fields params f flexible-fields path value-path]]
          [formic-flex-add params (:add classes) flex next f path]
          (when err
            [:div.error-wrapper
@@ -189,7 +195,7 @@
    [:pre (with-out-str (pprint f))]])
 
 (defn basic-field [{:keys [state errors] :as form-state} f path value-path]
-  (fn [{:keys [state errors] :as form-state} f path]
+  (fn [{:keys [state errors] :as form-state} f path value-path]
     (let [form-component (:component f)
           err            (formic-field/validate-field
                           form-state f path value-path)

@@ -76,9 +76,10 @@
    path
    (fn global-error-remover
      [_ _ old new]
-     (when (not=
-            (get-in old (conj path :value))
-            (get-in new (conj path :value)))
+     (when (or
+            (not=
+             (get-in old path :value)
+             (get-in new path :value)))
        (remove-watch state path)
        (swap! errors dissoc value-path)))))
 
@@ -209,8 +210,11 @@
   (let [classes     (or (:classes f) (get-in schema [:classes :flex]))
         options     (merge (get-in schema [:options :flex]) (:options f))
         validation  (:validation f)
-        raw-flex-values  (get-in values value-path)
-        flex-values (if (vector? raw-flex-values) raw-flex-values [])
+        raw-flex-values (get-in values value-path)
+        flex-values (if (vector? raw-flex-values)
+                      (filter #((set (:flex f)) (:field-type %))
+                              (get-in values value-path))
+                      [])
         touched     (not= [] flex-values)]
     (update-state! state path
                    {:id         (:id f)
@@ -223,13 +227,14 @@
                     :touched    touched})
     (doseq [n    (range (count flex-values))
             :let [ff (get flex-values n)
-                  field-type (keyword (:field-type ff))]]
+                  field-type (keyword (:field-type ff))]
+            :when [contains? (:flex f) field-type]]
       (let [field-id    (keyword (str/join "-" [(name (:id f)) n (name field-type)]))
             ff     (assoc ff :id field-id)
             params (assoc params
                           :f ff
                           :path (conj path :value n)
-                          :value-path (conj value-path n))]
+                          :value-path (conj value-path n :value))]
         (prepare-field params)))))
 
 (defn prepare-field-view [{:keys [state schema f path]}]
@@ -289,9 +294,6 @@
          :path [n]
          :value-path [(:id f)]
          :f f}))
-#_     (r/track! (fn []
-                 (and @state
-                      (reset! error-atom nil))))
      (reset! error-atom errors)
      {:schema form-schema
       :errors error-atom
