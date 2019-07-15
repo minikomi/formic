@@ -69,21 +69,19 @@
 ;; error handling
 ;; --------------------------------------------------------------
 
-(defn remove-global-error-on-change
-  [state errors path value-path]
-  (add-watch
-   state
-   path
-   (fn global-error-remover
-     [_ _ old new]
-     (when (or
-            (not=
-             (get-in old path :value)
-             (get-in new path :value)))
-       (remove-watch state path)
-       (swap! errors dissoc value-path)))))
+(defn remove-global-error-on-change [state errors path value-path]
+  (add-watch state path
+             (fn global-error-remover
+               [_ _ old new]
+               (when (not=
+                      (get-in old path :value)
+                      (get-in new path :value))
+                 (remove-watch state path)
+                 (swap! errors dissoc value-path)))))
 
-(defn validate-field [{:keys [errors state]} {:keys [validation compound touched flex value]} path value-path]
+(defn validate-field [{:keys [errors state]}
+                      {:keys [validation compound touched flex value]}
+                      path value-path]
   (or (when-let [global-error (get @errors value-path)]
         (remove-global-error-on-change state errors path value-path)
         global-error)
@@ -97,28 +95,30 @@
                   validation))))))
 
 (defn validate-all [form-state]
-  (let [error-found (volatile! nil)]
-    (doall
-     (tree-seq
-      (fn validate-all-branch [node]
-        (when-let
-            [err (and (:touched node)
-                      (first (st/validate-single (:value node)
-                                                 (:validation node))))]
-          (vreset! error-found {:node node :err err}))
-        (and (not @error-found)
-             (or
-              (vector? node)
-              (:flex node)
-              (:compound node))))
-      (fn validate-all-children? [node]
-        (cond
-          (vector? node) node
-          (or (:flex node)
-              (:compound node))
-          (:value node)))
-      @(:state form-state)))
-    @error-found))
+  (or
+   (not-empty @(:errors form-state))
+   (let [error-found (volatile! nil)]
+     (doall
+      (tree-seq
+       (fn validate-all-branch [node]
+         (when-let
+          [err (and (:touched node)
+                    (first (st/validate-single (:value node)
+                                               (:validation node))))]
+           (vreset! error-found {:node node :err err}))
+         (and (not @error-found)
+              (or
+               (vector? node)
+               (:flex node)
+               (:compound node))))
+       (fn validate-all-children? [node]
+         (cond
+           (vector? node) node
+           (or (:flex node)
+               (:compound node))
+           (:value node)))
+       @(:state form-state)))
+     @error-found)))
 
 ;; field prep
 ;; --------------------------------------------------------------
@@ -242,8 +242,7 @@
                  (assoc f :component
                         (or (:component f)
                             (get-in schema [:components (:field-type f)])
-                            formic-inputs/unknown-field)
-                        )))
+                            formic-inputs/unknown-field))))
 
 (defn prepare-field [{:keys [schema f] :as params}]
   (cond
