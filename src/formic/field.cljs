@@ -69,9 +69,22 @@
 ;; error handling
 ;; --------------------------------------------------------------
 
+(defn remove-global-error-on-change
+  [state errors path value-path]
+  (add-watch
+   state
+   path
+   (fn global-error-remover
+     [_ _ old new]
+     (when (not=
+            (get-in old (conj path :value))
+            (get-in new (conj path :value)))
+       (remove-watch state path)
+       (swap! errors dissoc value-path)))))
+
 (defn validate-field [{:keys [errors state]} {:keys [validation compound touched flex value]} path value-path]
   (or (when-let [global-error (get @errors value-path)]
-        (swap! errors dissoc value-path)
+        (remove-global-error-on-change state errors path value-path)
         global-error)
       (when (and validation (or compound touched))
         (let [shallow-value (cond
