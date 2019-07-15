@@ -140,9 +140,9 @@
 (defn prepare-field-basic [{:keys [schema values state f path value-path] :as params}]
   (let [default-value     (or (:default f)
                               (get-in schema [:defaults (:field-type f)])
-                              (when (and (:choices f)
+                              (when (and (:choices (:options f))
                                          (map? f))
-                                (ffirst (:choices f))))
+                                (ffirst (:choices (:options f)))))
         raw-initial-value (get-in values value-path)
         parser            (or (:parser f)
                               (get-in schema [:parsers (:field-type f)])

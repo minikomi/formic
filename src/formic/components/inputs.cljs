@@ -11,29 +11,27 @@
     (nil? cls)    v
     :else         cls))
 
-(defn error-label [f]
-  (fn [f]
-    (let [err (:err f)
-          classes (get-in f [:classes :err-label])]
-      (when err
-        [:h3 {:class classes} err]))))
+(defn error-label [{:keys [err classes]}]
+  (let [classes (:err-label classes)]
+    (when err
+      [:h3 {:class classes} err])))
 
-(defn common-wrapper [{:keys [classes id field-type] :as f} body]
-  (fn [{:keys [classes id field-type] :as f} body]
-    [:div.formic-input
-     {:id (u/make-path-id f)}
-     [(if (#{:email
-             :string
-             :textarea
-             :select
-             :checkbox
-             :number
-             :range} field-type) :label :div)
-      [:h5.formic-input-title
-       {:class (:title classes)}
-       (:title f)]
-      body
-      [error-label f]]]))
+(defn common-wrapper [f]
+  (fn [{:keys [title classes id field-type] :as f} body]
+    (let [wrapper-tag (if (#{:email
+                             :string
+                             :textarea
+                             :select
+                             :checkbox
+                             :number
+                             :range} field-type)
+                        :label :div)]
+      [:div.formic-input
+       {:id (u/make-path-id f)}
+       [wrapper-tag
+        [:h5.formic-input-title {:class (:title classes)} title]
+        body
+        [error-label f]]])))
 
 (defn make-attrs [{:keys [field-type
                           options
@@ -43,10 +41,9 @@
                           validation
                           touched] :as f}]
   (let [path-id (u/make-path-id f)]
-    (merge
+    (cond->
      {:id path-id
       :name path-id
-      :value (or @value "")
       :type (case field-type
               :email "email"
               :number "number"
@@ -65,8 +62,8 @@
                       :else
                       (.. ev -target -value))]
           (reset! value v)
-          (when-let  [f (:on-change options)]
-            (f ev))))
+          (when-let  [on-change-fn (:on-change options)]
+            (on-change-fn ev))))
       :required (boolean ((set validation) st/required))
       :checked (and (= field-type :checkbox)
                     @value)
@@ -74,8 +71,8 @@
       (fn input-on-click [ev]
         (if (= field-type :checkbox)
           (reset! touched true))
-        (when-let  [f (:on-click options)]
-          (f ev)))
+        (when-let  [on-click-fn (:on-click options)]
+          (on-click-fn ev)))
       :on-blur
       (fn input-on-blur [ev]
         (reset! touched true)
@@ -85,113 +82,118 @@
                    (reset! value (:max options))))
           (when (< @value (:min options ##-Inf)
                    (reset! value (:min options)))))
-        (when-let  [f (:on-blur options)]
-          (f ev)))
+        (when-let  [on-blur-fn (:on-blur options)]
+          (on-blur-fn ev)))
       :step (cond
               (:step options) (:step options)
               (= :number field-type) "any"
               :else nil)
       :min (:min options)
-      :max (:max options)})))
+      :max (:max options)}
+      (not= field-type :checkbox) (assoc :value (or @value ""))
+      )))
 
-(defn validating-input [{:keys [field-type] :as f}]
-  (let [options (:options f)
-        classes (:classes f)]
-    (fn [f]
-      [common-wrapper f
-       [:div.formic-input
-        [:input (make-attrs f)]
-        (when (= field-type "range")
-          [:h6.formic-range-value
-           {:class (:range-value classes)}
-           @(:value f)])]])))
+(defn validating-input [f]
+  (fn [{:keys [field-type options classes value] :as f}]
+   [common-wrapper f
+    [:div.formic-input
+     [:input (make-attrs f)]
+     (when (= field-type "range")
+       [:h6.formic-range-value
+        {:class (:range-value classes)}
+        value])]]))
 
-(defn validating-textarea [f]
-  (let [err @(:err f)]
-    [:div.formic-textarea
-     {:class (when err "error")}
-     [:h5.formic-input-title (u/format-kw (:id f))]
-     [:textarea (make-attrs f)]
-     [error-label f err]]))
+(defn validating-textarea [{:keys [err value id] :as f}]
+  [:div.formic-textarea
+   {:class (when err "error")}
+   [:h5.formic-input-title (u/format-kw id)]
+   [:textarea (make-attrs f)]
+   [error-label f err]])
 
-(defn validating-select [f]
+(defn validating-select [{:keys [options] :as f}]
+  "A select component.
+  Options:
+     choices - the choices available in key/label form
+     diabled - a set of keys which aren't selectable "
   [common-wrapper f
    [:select
     (make-attrs f)
     (doall
-     (for [[v l] (:choices f)]
-       ^{:key v}
+     (for [[key label] (:choices options)]
+       ^{:key key}
        [:option
-        {:value v
-         :disabled (get (:disabled f) v false)} l]))]])
+        {:value key
+         :disabled (get (:disabled options) key false)}
+        label]))]])
 
-(defn radio-select [f]
-  (let [classes (:classes f)]
-    [common-wrapper f
-     [:ul
-      {:class (:list classes)}
-      (doall
-       (for [[v l] (:choices f)
-             :let  [formic-radio-on-change
-                    (fn formic-radio-on-change [e]
-                      (reset! (:value f) v))
-                    formic-radio-on-click
-                    (fn formic-radio-on-click [_]
-                      (reset! (:touched f) true))
-                    is-selected
-                    (= @(:value f) v)
-                    input-attrs
-                    {:type      "radio"
-                     :class     (:input classes)
-                     :name      (name (:id f))
-                     :id        (str (name (:id f)) "-" v)
-                     :on-change formic-radio-on-change
-                     :on-click  formic-radio-on-click
-                     :checked   is-selected
-                     :value     (if (keyword? v) (name v) v)}]]
-         ^{:key v}
-         [:li
-          {:class (:item classes)}
-          [:label
-           {:class
-            (add-cls (:label classes) (str "value-" v))}
-           [:input input-attrs] l]]))]]))
-
-(defn validating-checkboxes [f]
-  (let [classes (:classes f)
-        value (or @(:value f) #{})]
-    [common-wrapper f
-     [:ul
-      {:class (:list classes)}
-      (doall
-       (for [[v l] (:choices f)
-             :let [formic-checkbox-on-change
-                   (fn formic-checkbox-on-change [_]
-                     (swap! (:value f) u/toggle v))
-                   formic-checkbox-on-click
-                   (fn formic-checkbox-on-click [_]
-                     (reset! (:touched f) true))
-                   is-selected (value v)
+(defn radio-select [{:keys [id classes options value touched] :as f}]
+  [common-wrapper f
+   [:ul
+    {:class (:list classes)}
+    (let [path-id (u/make-path-id f)]
+     (doall
+      (for [[key label] (:choices options)
+            :let  [formic-radio-on-change
+                   (fn formic-radio-on-change [e]
+                     (reset! value key))
+                   formic-radio-on-click
+                   (fn formic-radio-on-click [_]
+                     (reset! touched true))
+                   is-selected
+                   (= @value key)
+                   key-name (if (keyword? key) (name key) key)
                    input-attrs
-                   {:type "checkbox"
-                    :class ((fnil conj [])
-                            (if is-selected
-                              (:active-input classes)
-                              (:input classes)) v)
-                    :name (:id f)
-                    :on-change formic-checkbox-on-change
-                    :on-click formic-checkbox-on-click
-                    :checked (if is-selected "1" "")
-                    :value v}]]
-         ^{:key v}
-         [:li
-          {:class (:item classes)}
-          [:label
-           {:class (add-cls (:label classes) v)}
-           [:input input-attrs] l]]))]]))
+                   {:type      "radio"
+                    :class     (:input classes)
+                    :name      path-id
+                    :id        (str path-id "-" key-name)
+                    :on-change formic-radio-on-change
+                    :on-click  formic-radio-on-click
+                    :checked   is-selected
+                    :value     key-name}]]
+        ^{:key key}
+        [:li
+         {:class (:item classes)}
+         [:label
+          {:class
+           (conj (:label classes []) (str "key-" key-name))}
+          [:input input-attrs] label]])))]])
 
-(defn hidden [f]
-  [:input {:type "hidden" :value @(:value f)}])
+(defn validating-checkboxes [{:keys [id touched options value classes] :as f}]
+  [common-wrapper f
+   [:ul
+    {:class (:list classes)}
+    (doall
+     (for [[key label] (:choices options)
+           :let [formic-checkbox-on-change
+                 (fn formic-checkbox-on-change [_]
+                   (swap! value u/toggle key))
+                 formic-checkbox-on-click
+                 (fn formic-checkbox-on-click [_]
+                   (reset! touched true))
+                 is-selected (get @value key)
+                 key-name (name key)
+                 input-attrs
+                 {:type "checkbox"
+                  :class (conj
+                          (if is-selected
+                            (:active-input classes [])
+                            (:input classes []))
+                          key-name)
+                  :name id
+                  :on-change formic-checkbox-on-change
+                  :on-click formic-checkbox-on-click
+                  :checked (if is-selected "1" "")
+                  :value key}]]
+       ^{:key key}
+       [:li
+        {:class (:item classes)}
+        [:label
+         {:class (conj (:label classes []) key)}
+         [:input input-attrs] label]]))]])
+
+(defn hidden [{:keys [value]}]
+  [:input {:type "hidden" :value @value}])
 
 (defn unknown-field [f]
   [:h4 "Unknown:"
@@ -203,9 +205,11 @@
    :email      {:component validating-input}
    :number     {:component validating-input}
    :range      {:component validating-input}
-   :checkbox   {:component validating-input}
+   :checkbox   {:component validating-input
+                }
    :select     {:component validating-select}
    :radios     {:component radio-select}
    :text       {:component validating-textarea}
-   :checkboxes {:component validating-checkboxes}
+   :checkboxes {:component validating-checkboxes
+                :default #{}}
    :hidden     {:component hidden}})
