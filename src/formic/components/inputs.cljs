@@ -41,57 +41,57 @@
                           validation
                           touched] :as f}]
   (let [path-id (u/make-path-id f)]
-    (cond->
-     {:id path-id
-      :name path-id
-      :type (case field-type
-              :email "email"
-              :number "number"
-              :range "range"
-              :checkbox "checkbox"
-              "text")
-      :class (add-cls
-              (get classes (if err :err-input :input))
-              (when err "error"))
-      :on-change
-      (fn input-on-change [ev]
-        (let [v (cond (= field-type :checkbox)
-                      (boolean (.. ev -target -checked))
-                      (= field-type :number)
-                      (js/Number (not-empty (.. ev -target -value)))
-                      :else
-                      (.. ev -target -value))]
-          (reset! value v)
-          (when-let  [on-change-fn (:on-change options)]
-            (on-change-fn ev))))
-      :required (boolean ((set validation) st/required))
-      :checked (and (= field-type :checkbox)
-                    @value)
-      :on-click
-      (fn input-on-click [ev]
-        (if (= field-type :checkbox)
-          (reset! touched true))
-        (when-let  [on-click-fn (:on-click options)]
-          (on-click-fn ev)))
-      :on-blur
-      (fn input-on-blur [ev]
-        (reset! touched true)
-        (when (and (= field-type :number)
-                   (number? @value))
-          (when (> @value (:max options ##Inf)
-                   (reset! value (:max options))))
-          (when (< @value (:min options ##-Inf)
-                   (reset! value (:min options)))))
-        (when-let  [on-blur-fn (:on-blur options)]
-          (on-blur-fn ev)))
-      :step (cond
-              (:step options) (:step options)
-              (= :number field-type) "any"
-              :else nil)
-      :min (:min options)
-      :max (:max options)}
-      (not= field-type :checkbox) (assoc :value (or @value ""))
-      )))
+    {:id path-id
+     :name path-id
+     :type (case field-type
+             :email "email"
+             :number "number"
+             :range "range"
+             :checkbox "checkbox"
+             "text")
+     :class (add-cls
+             (get classes (if err :err-input :input))
+             (when err "error"))
+     :on-change
+     (fn input-on-change [ev]
+       (let [v (cond (= field-type :checkbox)
+                     (boolean (.. ev -target -checked))
+                     (= field-type :number)
+                     (js/Number (not-empty (.. ev -target -value)))
+                     :else
+                     (.. ev -target -value))]
+         (reset! value v)
+         (when-let  [on-change-fn (:on-change options)]
+           (on-change-fn ev))))
+     :required (boolean ((set validation) st/required))
+     :checked (when (= field-type :checkbox)
+                (if @value "checked" false))
+     :on-click
+     (fn input-on-click [ev]
+       (if (= field-type :checkbox)
+         (reset! touched true))
+       (when-let  [on-click-fn (:on-click options)]
+         (on-click-fn ev)))
+     :on-blur
+     (fn input-on-blur [ev]
+       (reset! touched true)
+       (when (and (= field-type :number)
+                  (number? @value))
+         (when (> @value (:max options ##Inf)
+                  (reset! value (:max options))))
+         (when (< @value (:min options ##-Inf)
+                  (reset! value (:min options)))))
+       (when-let  [on-blur-fn (:on-blur options)]
+         (on-blur-fn ev)))
+     :step (cond
+             (:step options) (:step options)
+             (= :number field-type) "any"
+             :else nil)
+     :value (if (= field-type :checkbox) nil
+                (or @value ""))
+     :min (:min options)
+     :max (:max options)}
+    ))
 
 (defn validating-input [f]
   (fn [{:keys [field-type options classes value] :as f}]
