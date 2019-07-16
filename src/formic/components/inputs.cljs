@@ -1,15 +1,7 @@
 (ns formic.components.inputs
-  (:require [formic.util :as u]
-            [formic.validation :as fv]
+  (:require [formic.util :as formic-util]
             [struct.core :as st]
             [reagent.core :as r]))
-
-(defn add-cls [cls v]
-  (cond
-    (string? cls) (str cls "." v)
-    (vector? cls) (conj cls v)
-    (nil? cls)    v
-    :else         cls))
 
 (defn error-label [{:keys [err classes]}]
   (let [classes (:err-label classes)]
@@ -27,8 +19,9 @@
                              :range} field-type)
                         :label :div)]
       [:div.formic-input
-       {:id (u/make-path-id f)}
+       {:class (formic-util/make-path-id f)}
        [wrapper-tag
+        {:class (formic-util/safe-conj (:formic-input-label classes) :formic-input-label)}
         [:h5.formic-input-title {:class (:title classes)} title]
         body
         [error-label f]]])))
@@ -40,58 +33,54 @@
                           classes
                           validation
                           touched] :as f}]
-  (let [path-id (u/make-path-id f)]
-    {:id path-id
-     :name path-id
-     :type (case field-type
-             :email "email"
-             :number "number"
-             :range "range"
-             :checkbox "checkbox"
-             "text")
-     :class (add-cls
-             (get classes (if err :err-input :input))
-             (when err "error"))
-     :on-change
-     (fn input-on-change [ev]
-       (let [v (cond (= field-type :checkbox)
-                     (boolean (.. ev -target -checked))
-                     (= field-type :number)
-                     (js/Number (not-empty (.. ev -target -value)))
-                     :else
-                     (.. ev -target -value))]
-         (reset! value v)
-         (when-let  [on-change-fn (:on-change options)]
-           (on-change-fn ev))))
-     :required (boolean ((set validation) st/required))
-     :checked (when (= field-type :checkbox)
-                (if @value "checked" false))
-     :on-click
-     (fn input-on-click [ev]
-       (if (= field-type :checkbox)
-         (reset! touched true))
-       (when-let  [on-click-fn (:on-click options)]
-         (on-click-fn ev)))
-     :on-blur
-     (fn input-on-blur [ev]
-       (reset! touched true)
-       (when (and (= field-type :number)
-                  (number? @value))
-         (when (> @value (:max options ##Inf)
-                  (reset! value (:max options))))
-         (when (< @value (:min options ##-Inf)
-                  (reset! value (:min options)))))
-       (when-let  [on-blur-fn (:on-blur options)]
-         (on-blur-fn ev)))
-     :step (cond
-             (:step options) (:step options)
-             (= :number field-type) "any"
-             :else nil)
-     :value (if (= field-type :checkbox) nil
-                (or @value ""))
-     :min (:min options)
-     :max (:max options)}
-    ))
+  (let [path-id (formic-util/make-path-id f)]
+    {:id        path-id
+     :name      path-id
+     :type      (case field-type
+                  :email    "email"
+                  :number   "number"
+                  :range    "range"
+                  :checkbox "checkbox"
+                  "text")
+     :class     (formic-util/safe-conj
+                 (get classes (if err :err-input :input))
+                 (when err "error"))
+     :step      (cond
+                  (:step options)        (:step options)
+                  (= :number field-type) "any"
+                  :else                  nil)
+     :value     (if (= field-type :checkbox) nil
+                    (or @value ""))
+     :min       (:min options)
+     :max       (:max options)
+     :required  (boolean ((set validation) st/required))
+     :checked   (when (= field-type :checkbox)
+                  (if @value "checked" false))
+     :on-change (fn input-on-change [ev]
+                  (let [v (cond (= field-type :checkbox)
+                                (boolean (.. ev -target -checked))
+                                (= field-type :number)
+                                (js/Number (not-empty (.. ev -target -value)))
+                                :else
+                                (.. ev -target -value))]
+                    (reset! value v)
+                    (when-let  [on-change-fn (:on-change options)]
+                      (on-change-fn ev))))
+     :on-click  (fn input-on-click [ev]
+                  (if (= field-type :checkbox)
+                    (reset! touched true))
+                  (when-let  [on-click-fn (:on-click options)]
+                    (on-click-fn ev)))
+     :on-blur   (fn input-on-blur [ev]
+                  (reset! touched true)
+                  (when (and (= field-type :number)
+                             (number? @value))
+                    (when (> @value (:max options ##Inf)
+                             (reset! value (:max options))))
+                    (when (< @value (:min options ##-Inf)
+                             (reset! value (:min options)))))
+                  (when-let  [on-blur-fn (:on-blur options)]
+                    (on-blur-fn ev)))}))
 
 (defn validating-input [f]
   (fn [{:keys [field-type options classes value] :as f}]
@@ -106,7 +95,7 @@
 (defn validating-textarea [{:keys [err value id] :as f}]
   [:div.formic-textarea
    {:class (when err "error")}
-   [:h5.formic-input-title (u/format-kw id)]
+   [:h5.formic-input-title (formic-util/format-kw id)]
    [:textarea (make-attrs f)]
    [error-label f err]])
 
@@ -126,11 +115,11 @@
          :disabled (get (:disabled options) key false)}
         label]))]])
 
-(defn radio-select [{:keys [id classes options value touched] :as f}]
+(defn radio-select [{:keys [form-id id classes options  value touched] :as f}]
   [common-wrapper f
    [:ul
     {:class (:list classes)}
-    (let [path-id (u/make-path-id f)]
+    (let [path-id (formic-util/make-path-id f)]
      (doall
       (for [[key label] (:choices options)
             :let  [formic-radio-on-change
@@ -167,7 +156,7 @@
      (for [[key label] (:choices options)
            :let [formic-checkbox-on-change
                  (fn formic-checkbox-on-change [_]
-                   (swap! value u/toggle key))
+                   (swap! value formic-util/toggle key))
                  formic-checkbox-on-click
                  (fn formic-checkbox-on-click [_]
                    (reset! touched true))
