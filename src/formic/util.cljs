@@ -59,3 +59,5 @@
 (defn assoc-if-new [m k v]
   (if (contains? m v) m
       (assoc m k v)))
+
+(def safe-conj (fnil conj []))

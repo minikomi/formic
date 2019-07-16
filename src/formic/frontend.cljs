@@ -15,59 +15,52 @@
 
 (defonce *debug* (r/atom false))
 
-(defn formic-compound-field [{:keys [state errors] :as form-state} f path value-path]
-  (let [{:keys [collapsable
-                collapsed
-                validation
-                classes
-                options]} f]
-    (fn [{:keys [state] :as form-state} f path value-path]
-      (let [value (get-in @state (conj path :value))
-            err (formic-field/validate-field
-                 form-state f path value-path)]
-        [:fieldset.formic-compoud
-         {:class (if err
-                   ((fnil conj [])
-                    (or
-                     (:err-fieldset classes)
-                     (:fieldset classes))
-                    :formic-error)
-                   (:fieldset classes))}
-         [:h4.formic-compound-title
-          {:class (:title classes)}
-          (:title f)
-          (when collapsable
-            [:a.formic-compound-collapse-button
-             {:class (:collapse-button classes)
-              :href "#"
-              :on-click (fn [ev]
-                          (.preventDefault ev)
-                          (swap! collapsed not))}
-             (if @collapsed "▶" "▼")])]
-         (when-not (and collapsable @collapsed)
-           [:ul.formic-formic-compound-fields
-            {:class (:fields-list classes)}
-            (doall
-             (for [n (range (count value))
-                   :let [f (get-in @state (conj path :value n))]]
-               ^{:key n}
-               [:li
-                {:class (:fields-item classes)}
-                (when @*debug*
-                  [:pre (with-out-str
-                         (pprint f)
-                         (pprint path)
-                         (pprint value-path))])
-                [field form-state
-                 f
-                 (conj path :value n)
-                 (conj value-path (:id f))]]))])
-         (when err
-           [:div.error-wrapper
-            {:class (:err-wrapper classes)}
-            [:h4.error
-             {:class (:err-label classes)}
-             err]])]))))
+(defn formic-compound-title [{:keys [collapsable collapsed validation classes title]}]
+  [:h4.formic-compound-title
+   {:class (:title classes)}
+   title
+   (when collapsable
+     [:a.formic-compound-collapse-button
+      {:class (:collapse-button classes)
+       :href "#"
+       :on-click (fn [ev]
+                   (.preventDefault ev)
+                   (swap! collapsed not))}
+      (if @collapsed "▶" "▼")])])
+
+(defn formic-compound-field [form-state f path value-path]
+  (fn [{:keys [state] :as form-state} f path value-path]
+    (let [{:keys [collapsable collapsed validation classes]} f
+          value (get-in @state (conj path :value))
+          err (formic-field/validate-field form-state f path value-path)]
+      [:fieldset.formic-compound
+       {:class (if err
+                 (formic-util/safe-conj
+                  (or (:err-fieldset classes)
+                      (:fieldset classes))
+                  :formic-error)
+                 (:fieldset classes))}
+       [formic-compound-title f]
+       (when-not (and collapsable @collapsed)
+         [:ul.formic-formic-compound-fields
+          {:class (:fields-list classes)}
+          (doall
+           (for [n (range (count value))
+                 :let [f (get-in @state (conj path :value n))]]
+             ^{:key n}
+             [:li
+              {:class (:fields-item classes)}
+              (when @*debug*
+                [:pre (with-out-str
+                        (pprint f)
+                        (pprint path)
+                        (pprint value-path))])
+              [field form-state
+               f
+               (conj path :value n)
+               (conj value-path (:id f))]]))])
+       (when err
+         [formic-inputs/error-label f])])))
 
 (defn flexible-controls [classes flexible-fields n]
   (let [is-first (= n 0)
@@ -170,14 +163,13 @@
                  form-state f path value-path)]
         [:fieldset.formic-flex
          {:class (if err
-                   ((fnil conj [])
+                   (formic-util/safe-conj
                     (or (:err-fieldset classes)
                         (:fieldset classes))
                     :formic-error)
                    (:fieldset classes))}
          [:div.formic-flex-fields-wrapper
-          {:class (:fields-wrapper classes)
-           :id (:id f)}
+          {:class (:fields-wrapper classes)}
           [:h4.formic-flex-title
            {:class (:title classes)}
            (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
@@ -238,7 +230,7 @@
 
 (defn fields [form-state]
   (let [state (:state form-state)]
-    [:div.formic-fields
+    [:fieldset.formic-fields
      {:class (get-in state [:classes :fields-wrapper])}
      (doall
       (for [n (range (count @state))
@@ -267,8 +259,7 @@
   - :label - label for the button (optional - defaults to formatted id)
   - :on-click - Action to perform on click.
               - calls preventDefault on event
-              - fn receives current form-state _atom_
-  "
+              - fn receives current form-state _atom_"
   [form-state buttons]
   [:div.formic-buttons
    [:ul.formic-buttons
