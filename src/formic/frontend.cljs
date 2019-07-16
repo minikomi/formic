@@ -221,7 +221,6 @@
               (get-in f [:classes :field])
               (get-in schema [:classes (:field-type f) :field])
               (get-in schema [:classes :field]))}
-     [:pre (prn-str f)]
      (cond
        (:flex f)
        [flexible-field form-state f path value-path]
