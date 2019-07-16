@@ -203,7 +203,7 @@
    :checkbox   {:component validating-input}
    :select     {:component validating-select}
    :radios     {:component radio-select}
-   :text       {:component validating-textarea}
+   :textarea   {:component validating-textarea}
    :checkboxes {:component validating-checkboxes
                 :default #{}}
    :hidden     {:component hidden}})
