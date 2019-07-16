@@ -31,7 +31,6 @@
                           value
                           err
                           classes
-                          validation
                           touched] :as f}]
   (let [path-id (formic-util/make-path-id f)]
     {:id        path-id
@@ -53,7 +52,7 @@
                     (or @value ""))
      :min       (:min options)
      :max       (:max options)
-     :required  (boolean ((set validation) st/required))
+     :required  (:required options)
      :checked   (when (= field-type :checkbox)
                   (if @value "checked" false))
      :on-change (fn input-on-change [ev]
