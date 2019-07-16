@@ -26,10 +26,10 @@
 (declare -serialize)
 
 (defn serialize-basic [{:keys [id field-type serializer value]}]
-    {:field-type field-type
-     :id id
-     :value (when (not (nil? value))
-              (serializer value))})
+  {:field-type field-type
+   :id id
+   :value (when (not (nil? value))
+            (serializer value))})
 
 (defn serialize-compound [{:keys [id value serializer field-type] :as field}]
   {:id id
@@ -144,6 +144,7 @@
                                          (map? f))
                                 (ffirst (:choices (:options f)))))
         raw-initial-value (get-in values value-path)
+        title             (gen-f-title f)
         parser            (or (:parser f)
                               (get-in schema [:parsers (:field-type f)])
                               identity)
@@ -163,15 +164,16 @@
         validation        (:validation f)
         classes           (or (:classes f) (get-in schema [:classes :fields (:field-type f)]))]
     (update-state! state path
-                   (merge f
-                          {:value      parsed-value
-                           :title      (or (:title f)
-                                           (str/capitalize (formic-util/format-kw (:id f))))
-                           :component  component
-                           :classes    classes
-                           :options    options
-                           :serializer serializer
-                           :touched    touched}))))
+                   {:id         (:id f)
+                    :field-type (:field-type f)
+                    :validation validation
+                    :classes    classes
+                    :component  component
+                    :title      title
+                    :options    options
+                    :serializer serializer
+                    :touched    touched
+                    :value      parsed-value})))
 
 (defn prepare-field-compound [{:keys [schema state values f path value-path] :as params}]
   (let [id              (:id f)
@@ -181,18 +183,19 @@
         validation      (:validation f)
         options         (merge (get-in schema [:options :compound]) (:options f))
         collapsable     (:collapsable options)
-        collapsed       (when collapsable (boolean (:default-collapsed options)))]
+        collapsed       (r/atom (when collapsable
+                                  (boolean (:collapsed options))))]
     (update-state! state path
                    {:id              (:id f)
-                    :compound        true
                     :field-type      (:field-type f)
-                    :title           (gen-f-title f)
+                    :compound        true
                     :classes         classes
-                    :collapsed       collapsed
                     :collapsable     collapsable
-                    :value           []
+                    :collapsed       collapsed
+                    :serializer      serializer
+                    :title           (gen-f-title f)
                     :validation      validation
-                    :serializer      serializer})
+                    :value           []})
     (doseq [n    (range (count compound-fields))
             :let [cf (get compound-fields n)
                   params (assoc params
@@ -224,31 +227,39 @@
             :let [ff (get flex-values n)
                   field-type (keyword (:field-type ff))]
             :when [contains? (:flex f) field-type]]
-      (let [field-id    (keyword (str/join "-" [(name (:id f)) n (name field-type)]))
-            ff     (assoc ff :id field-id)
-            params (assoc params
-                          :f ff
-                          :path (conj path :value n)
-                          :value-path (conj value-path n :value))]
+      (let [field-id (keyword (str/join "-" [(name (:id f)) n (name field-type)]))
+            ff       (assoc ff :id field-id)
+            params   (assoc params
+                            :f ff
+                            :path (conj path :value n)
+                            :value-path (conj value-path n :value))]
         (prepare-field params)))))
 
 (defn prepare-field-view [{:keys [state schema f path]}]
-  (update-state! state path
-                 (assoc f :component
-                        (or (:component f)
-                            (get-in schema [:components (:field-type f)])
-                            formic-inputs/unknown-field))))
+  (update-state!
+   state path
+   (assoc f :component
+          (or (:component f)
+              (get-in schema [:components (:field-type f)])
+              formic-inputs/unknown-field))))
+
+(defn prepare-field-replace [{:keys [schema f] :as params}]
+  (let [field-type-schema (get-in schema [:field-types (:field-type f)])
+        f (merge f field-type-schema)]
+    (prepare-field (assoc params :f f))))
 
 (defn prepare-field [{:keys [schema f] :as params}]
   (cond
-    (:fields f)     (prepare-field-compound params)
-    (:flex f)       (prepare-field-flexible params)
-    (:view f)       (prepare-field-view params)
-    (get-in schema  [:field-types (:field-type f)])
-    (let [field-type-schema (get-in schema [:field-types (:field-type f)])
-          f (merge f field-type-schema)]
-      (prepare-field (assoc params :f f)))
-    :else (prepare-field-basic params)))
+    (:fields f)
+    (prepare-field-compound params)
+    (:flex f)
+    (prepare-field-flexible params)
+    (:view f)
+    (prepare-field-view params)
+    (get-in schema [:field-types (:field-type f)])
+    (prepare-field-replace params)
+    :else
+    (prepare-field-basic params)))
 
 (defn add-field-to-schema
   "Adds field defined components, parsers, serializers, defaults, validation
