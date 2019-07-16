@@ -71,4 +71,6 @@
 (defn assoc-if-new
   "Assocs in m only if the key k does't exist"
   [m k v]
-  (if (contains? m v) m))
+  (if (contains? m v)
+    m
+    (assoc m k v)))
