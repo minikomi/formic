@@ -1,10 +1,10 @@
 (ns formic.field
-  (:require [formic.util :as formic-util]
-            [formic.components.inputs :as formic-inputs]
-            [struct.core :as st]
+  (:require [clojure.string :as str]
             [clojure.walk :as w]
-            [clojure.string :as str]
-            [reagent.core :as r]))
+            [formic.components.inputs :as formic-inputs]
+            [formic.util :as formic-util]
+            [reagent.core :as r]
+            [struct.core :as st]))
 
 ;; touch all
 ;; -------------------------------------------------------------
@@ -162,7 +162,10 @@
                               (get-in schema [:components (:field-type f)])
                               formic-inputs/unknown-field)
         validation        (:validation f)
-        classes           (or (:classes f) (get-in schema [:classes :fields (:field-type f)]))]
+        classes           (merge
+                           (get-in schema [:classes :basic])
+                           (get-in schema [:classes :field-types (:field-type f)])
+                           (:classes f))]
     (update-state! state path
                    {:id         (:id f)
                     :field-type (:field-type f)
