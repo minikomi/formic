@@ -21,7 +21,7 @@
       [:div.formic-input
        {:class (formic-util/make-path-id f)}
        [wrapper-tag
-        {:class (formic-util/safe-conj (:formic-input-label classes) :formic-input-label)}
+        {:class (formic-util/conjv (:formic-input-label classes) :formic-input-label)}
         [:h5.formic-input-title {:class (:title classes)} title]
         body
         [error-label f]]])))
@@ -42,7 +42,7 @@
                   :range    "range"
                   :checkbox "checkbox"
                   "text")
-     :class     (formic-util/safe-conj
+     :class     (formic-util/conjv
                  (get classes (if err :err-input :input))
                  (when err "error"))
      :step      (cond

@@ -35,7 +35,7 @@
           err (formic-field/validate-field form-state f path value-path)]
       [:fieldset.formic-compound
        {:class (if err
-                 (formic-util/safe-conj
+                 (formic-util/conjv
                   (or (:err-fieldset classes)
                       (:fieldset classes))
                   :formic-error)
@@ -163,7 +163,7 @@
                  form-state f path value-path)]
         [:fieldset.formic-flex
          {:class (if err
-                   (formic-util/safe-conj
+                   (formic-util/conjv
                     (or (:err-fieldset classes)
                         (:fieldset classes))
                     :formic-error)
