@@ -186,8 +186,8 @@
   [:h4 "Unknown:"
    [:pre (with-out-str (pprint f))]])
 
-(defn basic-field [{:keys [state errors] :as form-state} f path value-path]
-  (fn [{:keys [state errors] :as form-state} f path value-path]
+(defn basic-field [form-state f path value-path]
+  (fn [{:keys [state errors schema] :as form-state} f path value-path]
     (let [form-component (:component f)
           err            (formic-field/validate-field
                           form-state f path value-path)
@@ -199,8 +199,10 @@
                                 :touched touched
                                 :value value
                                 :err err)]
-      [:div.formic-field
-       {:class (when err "formic-error")}
+      [:div.formic-basic-field
+       {:class (formic-util/conjv
+                (get-in schema [:classes :basic-field])
+                (when err "formic-error"))}
        (when form-component [form-component final-f])])))
 
 (defn formic-view-field [{:keys [state components]} f path value-path]
@@ -213,30 +215,35 @@
      (apply (:component f) view-values)]))
 
 (defn field [form-state f path value-path]
-  (fn [form-state f path value-path]
-    (cond
-      (:flex f)
-      [flexible-field form-state f path value-path]
-      (:compound f)
-      [formic-compound-field form-state f path value-path]
-      (:view f)
-      [formic-view-field form-state f path value-path]
-      :else
-      [basic-field form-state f path value-path])))
+  (fn [{:keys [schema] :as form-state} f path value-path]
+    [:div.formic-field
+     {:class (or
+              (get-in f [:classes :field])
+              (get-in schema [:classes (:field-type f) :field])
+              (get-in schema [:classes :field]))}
+     [:pre (prn-str f)]
+     (cond
+       (:flex f)
+       [flexible-field form-state f path value-path]
+       (:compound f)
+       [formic-compound-field form-state f path value-path]
+       (:view f)
+       [formic-view-field form-state f path value-path]
+       :else
+       [basic-field form-state f path value-path])]))
 
 (defn debug-state [{:keys [state]}]
   (when goog.DEBUG
     [d/DataFriskShell @state]))
 
-(defn fields [form-state]
-  (let [state (:state form-state)]
-    [:fieldset.formic-fields
-     {:class (get-in state [:classes :fields-wrapper])}
-     (doall
-      (for [n (range (count @state))
-            :let [f (get @state n)]]
-        ^{:key n}
-        [field form-state f [n] [(:id f)]]))]))
+(defn fields [{:keys [state schema] :as form-state}]
+  [:fieldset.formic-fields
+   {:class (or (get-in schema [:classes :fieldset]))}
+   (doall
+    (for [n (range (count @state))
+          :let [f (get @state n)]]
+      ^{:key n}
+      [field form-state f [n] [(:id f)]]))])
 
 (defn uncollapse [{:keys [state]} path]
   (doseq [n (range (count path))

@@ -87,17 +87,14 @@
    [common-wrapper f
     [:div.formic-input
      [:input (make-attrs f)]
-     (when (= field-type "range")
+     (when (= field-type :range)
        [:h6.formic-range-value
         {:class (:range-value classes)}
-        value])]]))
+        @value])]]))
 
 (defn validating-textarea [{:keys [err value id] :as f}]
-  [:div.formic-textarea
-   {:class (when err "error")}
-   [:h5.formic-input-title (formic-util/format-kw id)]
-   [:textarea (make-attrs f)]
-   [error-label f err]])
+  [common-wrapper f
+   [:textarea (make-attrs f)]])
 
 (defn validating-select [{:keys [options] :as f}]
   "A select component.
@@ -133,7 +130,11 @@
                    key-name (if (keyword? key) (name key) key)
                    input-attrs
                    {:type      "radio"
-                    :class     (:input classes)
+                    :class     (formic-util/conjv
+                                (if is-selected
+                                  (:input-active classes (:input classes))
+                                  (:input classes))
+                                key-name)
                     :name      path-id
                     :id        (str path-id "-" key-name)
                     :on-change formic-radio-on-change
@@ -145,7 +146,10 @@
          {:class (:item classes)}
          [:label
           {:class
-           (conj (:label classes []) (str "key-" key-name))}
+           (conj (if is-selected
+                   (:label-active classes (:label classes))
+                   (:label classes))
+                 (str "key-" key-name))}
           [:input input-attrs] label]])))]])
 
 (defn validating-checkboxes [{:keys [id touched options value classes] :as f}]
@@ -164,10 +168,10 @@
                  key-name (name key)
                  input-attrs
                  {:type "checkbox"
-                  :class (conj
+                  :class (formic-util/conjv
                           (if is-selected
-                            (:active-input classes [])
-                            (:input classes []))
+                            (:input-active classes (:input classes))
+                            (:input classes))
                           key-name)
                   :name id
                   :on-change formic-checkbox-on-change
@@ -178,7 +182,10 @@
        [:li
         {:class (:item classes)}
         [:label
-         {:class (conj (:label classes []) key)}
+         {:class
+          (if is-selected
+            (:label-active classes (:label classes))
+            (:label classes))}
          [:input input-attrs] label]]))]])
 
 (defn hidden [{:keys [value]}]
@@ -194,8 +201,7 @@
    :email      {:component validating-input}
    :number     {:component validating-input}
    :range      {:component validating-input}
-   :checkbox   {:component validating-input
-                }
+   :checkbox   {:component validating-input}
    :select     {:component validating-select}
    :radios     {:component radio-select}
    :text       {:component validating-textarea}
