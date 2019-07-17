@@ -78,7 +78,7 @@
                :field-type :string}]
              :validation
              [{:message "Colors must not be the same"
-               :validate (fn [{:keys [main-color logo-color] :as a}]
+               :validate (fn [{:keys [main-color logo-color]}]
                            (or (str/blank? main-color)
                                (str/blank? logo-color)
                                (not= main-color logo-color)))}]}]})
@@ -154,8 +154,8 @@
                       
 (defn live-form []
   (let [form-state (formic-field/prepare-state
-                      form-schema-sink 
-                      {:values form-values-sink})]
+                    form-schema-sink 
+                    {:values form-values-sink})]
     (fn []
       [:form
        [formic-fronted/fields form-state]])))
