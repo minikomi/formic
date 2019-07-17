@@ -12,7 +12,16 @@
 
 (def flip-move (r/adapt-react-class js/FlipMove))
 
+(def DEFAULT_FLIP_MOVE_OPTIONS
+  {:duration        200
+   :type-name       nil
+   :leave-animation false
+   :enter-animation "fade"})
+
 (defonce *debug* (r/atom false))
+
+;; Compound fields
+;; --------------------------------------------------------------
 
 (defn formic-compound-title [{:keys [collapsable collapsed validation classes title]}]
   [:h4.formic-compound-title
@@ -61,6 +70,9 @@
        (when err
          [formic-inputs/error-label f])])))
 
+;; Flex fields
+;; --------------------------------------------------------------
+
 (defn flexible-controls [classes flexible-fields n]
   (let [is-first (= n 0)
         is-last  (= (-> flexible-fields deref count dec) n)]
@@ -108,12 +120,6 @@
           (.preventDefault ev)
           (swap! flexible-fields formic-util/vremove n))}
        "✗"]]]))
-
-(def DEFAULT_FLIP_MOVE_OPTIONS
-  {:duration        200
-   :type-name nil
-   :leave-animation false
-   :enter-animation "fade"})
 
 (defn formic-flex-fields [{:keys [state] :as params} f flexible-fields path value-path]
   (let [classes (:classes f)]
@@ -181,9 +187,8 @@
              {:class (:err-label classes)}
              err]])]))))
 
-(defn unknown-field [f]
-  [:h4 "Unknown:"
-   [:pre (with-out-str (pprint f))]])
+;; Basic fields
+;; --------------------------------------------------------------
 
 (defn basic-field [form-state f path value-path]
   (fn [{:keys [state errors schema] :as form-state} f path value-path]
@@ -213,6 +218,9 @@
     [:div.formic-view
      (apply (:component f) view-values)]))
 
+;; Dispatch
+;; --------------------------------------------------------------
+
 (defn field [form-state f path value-path]
   (fn [{:keys [schema] :as form-state} f path value-path]
     [:div.formic-field
@@ -230,10 +238,6 @@
        :else
        [basic-field form-state f path value-path])]))
 
-(defn debug-state [{:keys [state]}]
-  (when goog.DEBUG
-    [d/DataFriskShell @state]))
-
 (defn fields [{:keys [state schema] :as form-state}]
   [:fieldset.formic-fields
    {:class (or (get-in schema [:classes :fieldset]))}
@@ -242,6 +246,16 @@
           :let [f (get @state n)]]
       ^{:key n}
       [field form-state f [n] [(:id f)]]))])
+
+;; Helper
+;; --------------------------------------------------------------
+
+(defn debug-state [{:keys [state]}]
+  (when goog.DEBUG
+    [d/DataFriskShell @state]))
+
+;; Error / state walking
+;; --------------------------------------------------------------
 
 (defn uncollapse [{:keys [state]} path]
   (doseq [n (range (count path))
@@ -257,14 +271,17 @@
                  (gdom/getElementByTagNameAndClass "input" "error")]
         (.focus first-err-input)))))
 
+;; Buttons
+;; --------------------------------------------------------------
+
 (defn buttons
   "Renders the buttons for a set of formic fields.
   Each button has
-  - :id - id for the button
-  - :label - label for the button (optional - defaults to formatted id)
+  - :id       - id for the button
+  - :label    - label for the button (optional - defaults to formatted id)
   - :on-click - Action to perform on click.
-              - calls preventDefault on event
-              - fn receives current form-state _atom_"
+                  - calls preventDefault on event
+                  - fn receives current form-state _atom_"
   [form-state buttons]
   [:div.formic-buttons
    [:ul.formic-buttons
