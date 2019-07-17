@@ -27,11 +27,13 @@
 
 (declare -serialize)
 
-(defn serialize-basic [{:keys [id field-type serializer value]}]
-  {:field-type field-type
-   :id id
-   :value (when (not (nil? value))
-            (serializer value))})
+(defn serialize-basic [{:keys [id field-type serializer value] :as f}]
+  (with-meta
+   {:field-type field-type
+    :id id
+    :value (when (not (nil? value))
+             (serializer value))}
+    {::aliased (::aliased f)}))
 
 (defn serialize-compound [{:keys [id value serializer field-type] :as field}]
   {:id id
@@ -46,8 +48,8 @@
 (defn serialize-flex [{:keys [value id] :as params}]
   {:id id
    :value (->> value
-               (mapv (fn [{:keys [field-type value]}]
-                       {:field-type field-type
+               (mapv (fn [{:keys [field-type value] :as f}]
+                       {:field-type (or (::aliased (meta f)) field-type)
                         :value value}))
                (filterv #(not-empty (:value %)))
                not-empty)})
@@ -203,6 +205,7 @@
     (update-state! state path
                    {:id         (:id f)
                     :field-type (:field-type f)
+                    ::aliased   (::aliased f)
                     :validation validation
                     :classes    classes
                     :component  component
@@ -284,8 +287,11 @@
               formic-inputs/unknown-field))))
 
 (defn prepare-field-replace [{:keys [schema f] :as params}]
-  (let [field-type-schema (get-in schema [:field-types (:field-type f)])
-        f (merge f field-type-schema)]
+  (let [field-type (:field-type f)
+        field-type-schema (get-in schema [:field-types field-type])
+        f (assoc (merge f field-type-schema)
+                 :id (:id f)
+                 ::aliased field-type)]
     (prepare-field (assoc params :f f))))
 
 (defn prepare-field [{:keys [schema f] :as params}]
@@ -296,13 +302,15 @@
     (prepare-field-flexible params)
     (:view f)
     (prepare-field-view params)
-    (get-in schema [:field-types (:field-type f)])
+    (and
+     (not (::aliased f))
+     (get-in schema [:field-types (:field-type f)]))
     (prepare-field-replace params)
     :else
     (prepare-field-basic params)))
 
 (defn add-field-to-schema
-  "Adds field defined components, parsers, serializers, defaults, validation
+  "Adds field defined components, parsers, serializers, defaults
   into the main schema. Will respect previously defined versions
   to allow override."
   [schema [field-type {:keys [component parser default serializer validation]}]]
