@@ -18,6 +18,96 @@
 * Global error atom
 * Atomic styles eg. Tachyon
 
+#### Simple Fields
+
+``` cljs
+(def form-schema
+  {:id          :example-form-1
+   :classes     form-styles/combined
+   :fields      [{:field-type :string
+                  :id         :string-field
+                  :validation [st/required]}
+                 {:field-type :email
+                  :id         :email-field
+                  :validation [st/email]}
+                 {:field-type :number
+                  :id         :number-field
+                  :options    {:min  0
+                               :max  10
+                               :step 0.2}}
+                 {:field-type :range
+                  :id         :range-field
+                  :options    {:min 0
+                               :max 10}}
+                 {:field-type :checkbox
+                  :id         :checkbox-field}
+                 {:field-type :select
+                  :id         :select-field
+                  :options    {:choices
+                               [[:a "Select A"]
+                                [:b "Select B"]
+                                [:c "Or perhaps C"]
+                                [:d "But not D"]]
+                               :disabled #{:d}}}
+                 {:field-type :radios
+                  :id         :radios-field
+                  :options    {:choices [[:am "AM"]
+                                         [:fm "FM"]
+                                         [:uhf "UHF"]]}}
+                 {:field-type :textarea
+                  :id         :text-area}
+                 {:field-type :checkboxes
+                  :id         :checkboxes-field
+                  :options    {:choices
+                               [[:homework "Did my homework"]
+                                [:dishes "Washed the dishes"]
+                                [:trash "Took out the trash"]
+                                [:teeth "Brushed my teeth"]]}}
+                 {:field-type :hidden
+                  :id         :hidden-field
+                  :default    "hidden value"}]})
+```
+
+#### Grouped Fields
+
+``` cljs
+(def form-schema
+{:id          :example-form-2
+   :fields      [{:id :flag-colors
+                  :fields
+                  [{:id :main-color
+                    :field-type :string}
+                   {:id :logo-color
+                    :field-type :string}]
+                  :validation
+                  [{:message "Colors must not be the same"
+                    :validate (fn [{:keys [main-color logo-color] :as a}]
+                                (or (str/blank? main-color)
+                                    (str/blank? logo-color)
+                                    (not= main-color logo-color)))}]}]})
+```
+
+#### Flexible fields
+
+``` cljs
+(def form-schema
+  {:id          :example-form-3
+   :field-types {:person
+                 {:fields [{:id :first-name
+                            :field-type :string}
+                           {:id :last-name
+                            :field-type :string}]}}
+   :fields      [{:id :road-trip-people
+                  :flex [:person]
+                  :validation
+                  [{:message "Only 5 people allowed!"
+                    :validate (fn [values]
+                                (<= (count values) 5))}]}]})
+```
+
+
+#### Kitchen sink
+
 
 ``` cljs
 (def form-schema
@@ -42,7 +132,7 @@
                   :flex [:compound-field-nested 
                          :compound-field 
                          :string-field-required]}]})
-                         
+
 (def form-data
   {:compound-alias
    {:comp
