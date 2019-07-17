@@ -67,7 +67,11 @@
 ;; error handling
 ;; --------------------------------------------------------------
 
-(defn remove-global-error-on-change [state errors path value-path]
+(defn remove-global-error-on-change
+  "Adds a watcher to the state value which removes once
+   an error at a specific path, when the value for that
+   error changes."
+  [state errors path value-path]
   (add-watch state path
              (fn global-error-remover
                [_ _ old new]
@@ -77,9 +81,11 @@
                  (remove-watch state path)
                  (swap! errors dissoc value-path)))))
 
-(defn validate-field [{:keys [errors state]}
-                      {:keys [validation compound touched flex value]}
-                      path value-path]
+(defn validate-field
+  "Validates a single field"
+  [{:keys [errors state] :as form-state}
+   {:keys [validation compound touched flex value] :as f}
+   path value-path]
   (or (when-let [global-error (get @errors value-path)]
         (remove-global-error-on-change state errors path value-path)
         global-error)
@@ -92,31 +98,49 @@
                   shallow-value
                   validation))))))
 
-(defn validate-all [form-state]
-  (or
-   (not-empty @(:errors form-state))
-   (let [error-found (volatile! nil)]
-     (doall
-      (tree-seq
-       (fn validate-all-branch [node]
-         (when-let
-          [err (and (:touched node)
-                    (first (st/validate-single (:value node)
-                                               (:validation node))))]
-           (vreset! error-found {:node node :err err}))
-         (and (not @error-found)
-              (or
-               (vector? node)
-               (:flex node)
-               (:compound node))))
-       (fn validate-all-children? [node]
-         (cond
-           (vector? node) node
-           (or (:flex node)
-               (:compound node))
-           (:value node)))
-       @(:state form-state)))
-     @error-found)))
+(declare -validate-all)
+
+(defn -validate-all-compound [found state path value-path]
+  (let [field (get-in state path)]
+    (doseq [n (range (count (:value field)))]
+      (-validate-all found state (conj path :value n) (conj value-path (get-in field [:value n :id]))))))
+
+(defn -validate-all-flexible [found state path value-path]
+  (let [field (get-in state path)]
+    (doseq [n (range (count (:value field)))]
+      (-validate-all found state (conj path :value n) (conj value-path n)))))
+
+(defn -validate-all-single [found state path value-path]
+  (let [field (get-in state path)
+        err (and (:validation field)
+                 (first (st/validate-single (:value field) (:validation field))))]
+    (println err)
+    (when err (vreset! found [value-path err]))))
+
+(defn -validate-all [found state path value-path]
+  (println "VA" path)
+  (-validate-all-single found state path value-path)
+  (when (not @found)
+    (let [f (get-in state path)]
+      (cond
+       (:compound f)
+       (-validate-all-compound found state path value-path)
+       (:flex f)
+       (-validate-all-flexible found state path value-path)
+       :else nil))))
+
+(defn validate-all
+  "Walks the form state hashmap and returns the first path/error it finds.
+   Otherwise, returns nil"
+  [{:keys [errors state] :as form-state}]
+  (if (not-empty @errors)
+    (first (sort-by #(count (first %)) @errors))
+    (let [found (volatile! nil)]
+      (doseq [n (range (count  @state))
+              :when (not @found)
+              :let [f (nth @state n)]]
+        (-validate-all found @state [n] [(:id f)]))
+      @found)))
 
 ;; field prep
 ;; --------------------------------------------------------------
