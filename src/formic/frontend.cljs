@@ -173,7 +173,7 @@
         [:fieldset.formic-flex
          {:class (if err
                    (formic-util/conjv
-                    (or (:err-fieldset classes)
+                    (or (:error-fieldset classes)
                         (:fieldset classes))
                     :formic-error)
                    (:fieldset classes))}

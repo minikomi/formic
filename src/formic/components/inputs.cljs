@@ -6,9 +6,7 @@
 (defn error-label [{:keys [err classes]}]
   (let [classes (:error-label classes)]
     (when err
-      [:h3 {:class classes}
-       [:pre (prn-str classes)]
-       err])))
+      [:h3 {:class classes} err])))
 
 (defn common-wrapper [f]
   (fn [{:keys [title classes id field-type] :as f} body]
@@ -44,7 +42,7 @@
                   :checkbox "checkbox"
                   "text")
      :class     (formic-util/conjv
-                 (get classes (if err :err-input :input))
+                 (get classes (if err :error-input :input) (get classes :input))
                  (when err "error"))
      :step      (cond
                   (:step options)        (:step options)
