@@ -1,12 +1,13 @@
 (ns formic.frontend
-  (:require [cljs.pprint :refer [pprint]]
-            [clojure.string :as s]
-            [datafrisk.core :as d]
-            [formic.components.inputs :as formic-inputs]
-            [formic.field :as formic-field]
+  (:require [formic.components.inputs :as formic-inputs]
             [formic.util :as formic-util]
+            [formic.field :as formic-field]
+            [datafrisk.core :as d]
             [goog.dom :as gdom]
-            [reagent.core :as r]))
+            [cljsjs.react-flip-move]
+            [reagent.core :as r]
+            [cljs.pprint :refer [pprint]]
+            [clojure.string :as s]))
 
 (declare field)
 
