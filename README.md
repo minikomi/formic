@@ -5,6 +5,7 @@
 ### Features
 
 * Form Schema + Initial values = Live form state
+* Aliasing of fields for common patterns
 * Real time validation using [funcool.struct](http://funcool.github.io/struct/latest/)
 * Parsers & Serialization for each field
   - Sometimes you don't control the data you get
