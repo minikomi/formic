@@ -253,8 +253,8 @@
         validation      (:validation f)
         raw-flex-values (get-in values value-path)
         flex-values     (if (vector? raw-flex-values)
-                          (filter #((set (:flex f)) (:field-type %))
-                                  (get-in values value-path))
+                          (filterv #((set (:flex f)) (:field-type %))
+                                   (get-in values value-path))
                           [])
         touched         (not= [] flex-values)]
     (update-state! state path
@@ -267,7 +267,7 @@
                     :validation validation
                     :touched    touched})
     (doseq [n     (range (count flex-values))
-            :let  [ff (get flex-values n)
+            :let  [ff (nth flex-values n)
                    field-type (keyword (:field-type ff))]
             :when [contains? (:flex f) field-type]]
       (let [field-id (keyword (str/join "-" [(name (:id f)) n (name field-type)]))
@@ -277,6 +277,10 @@
                             :path (conj path :value n)
                             :value-path (conj value-path n :value))]
         (prepare-field params)))))
+
+
+
+
 
 (defn prepare-field-view [{:keys [state schema f path]}]
   (update-state!
