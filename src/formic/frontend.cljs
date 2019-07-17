@@ -141,33 +141,34 @@
             [flexible-controls (:controls classes) flexible-fields n]
             [field params ff (conj path :value n) (conj value-path n)]]))]])))
 
-(defn formic-flex-add [{:keys [state schema] :as params}
-                       classes flex-types next f path]
-  [:ul.formic-flex-add
-   {:class (:list classes)}
-   (for [field-type flex-types]
-     ^{:key field-type}
-     [:li
-      {:class (:item classes)}
-      [:a.button
-       {:class (:button classes)
-        :href  "#"
-        :on-click
-        (fn [ev]
-          (.preventDefault ev)
-          (formic-field/add-field params
-                                  f
-                                  path
-                                  next
-                                  field-type))}
-       [:span.plus "+"]
-       (formic-util/format-kw field-type)]])])
+(defn formic-flex-add [params classes flex-types next f path]
+  [:div
+   [:ul.formic-flex-add
+    {:class (:list classes)}
+    (doall
+     (for [field-type flex-types]
+       ^{:key field-type}
+       [:li
+        {:class (:item classes)}
+        [:a.button
+         {:class (:button classes)
+          :href  "#"
+          :on-click
+          (fn [ev]
+            (.preventDefault ev)
+            (formic-field/add-field params
+                                    f
+                                    path
+                                    next
+                                    field-type))}
+         [:span.plus "+"]
+         (formic-util/format-kw field-type)]]))]])
 
 (defn flexible-field [{:keys [state errors compound schema] :as params} f path value-path]
-  (let [next (r/atom (or (count (:value (get-in @state path))) 0))
-        {:keys [classes flex]} f]
+  (let [next (r/atom (or (count (:value (get-in @state path))) 0))]
     (fn [{:keys [state compound] :as form-state} f path value-path]
       (let [flexible-fields (r/cursor state (conj path :value))
+            {:keys [classes flex]} f
             err (formic-field/validate-field
                  form-state f path value-path)]
         [:fieldset.formic-flex
