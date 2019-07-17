@@ -16,9 +16,6 @@
 
 (declare -validate-values)
 
-(defn update-state! [state path f]
-  (vswap! state path f))
-
 (defn -validate-flex [schema state values path value-path]
   (-validate-node state values path value-path)
   (vswap! state assoc-in (conj path :value) [])
