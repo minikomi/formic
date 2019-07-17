@@ -11,10 +11,10 @@
 
 (def length-range
   "ensures a string is within size :from ~ :to"
-  (letfn [(validate [v from to]
+  (letfn [(validate-str-len [v from to]
             {:pre [(number? from) (number? to)]}
             (and (string? v)
                  (<= from (count v) to)))]
     {:message "Input must be within $0 to $1 chars"
      :optional true
-     :validate validate}))
+     :validate validate-str-len}))
