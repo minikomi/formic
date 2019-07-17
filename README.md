@@ -21,7 +21,7 @@
 #### Simple Fields
 
 ``` cljs
-(def form-schema
+(def form-schema-simple
   {:fields  [{:field-type :string
               :id         :string-field
               :validation [st/required]}
@@ -69,7 +69,7 @@
 #### Grouped Fields
 
 ``` cljs
-(def form-schema
+(def form-schema-grouped
   {:fields [{:id :flag-colors
              :fields
              [{:id :main-color
@@ -87,7 +87,7 @@
 #### Flexible fields
 
 ``` cljs
-(def form-schema
+(def form-schema-flex
   {:field-types {:person
                  {:fields [{:id :first-name
                             :field-type :string}
@@ -106,7 +106,7 @@
 
 
 ``` cljs
-(def form-schema
+(def form-schema-sink
   {:field-types {:string-field-required {:field-type :string
                                          :validation [st/required]}
                  :compound-field
@@ -135,7 +135,7 @@
 
 ``` cljs
 
-(def form-data
+(def form-data-sink
   {:compound-alias
    {:comp
     {:string-field-ok "aa", :string-field-required "bb"}},
@@ -153,7 +153,9 @@
        :string-field-required "gggg"}}}]})
                       
 (defn live-form []
-  (let [form-state (formic-field/prepare-state form-schema {:values form-values})]
+  (let [form-state (formic-field/prepare-state
+                      form-schema-sink 
+                      {:values form-values-sink})]
     (fn []
       [:form
        [formic-fronted/fields form-state]])))
