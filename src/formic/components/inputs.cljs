@@ -4,9 +4,11 @@
             [reagent.core :as r]))
 
 (defn error-label [{:keys [err classes]}]
-  (let [classes (:err-label classes)]
+  (let [classes (:error-label classes)]
     (when err
-      [:h3 {:class classes} err])))
+      [:h3 {:class classes}
+       [:pre (prn-str classes)]
+       err])))
 
 (defn common-wrapper [f]
   (fn [{:keys [title classes id field-type] :as f} body]
