@@ -185,11 +185,8 @@
           [formic-flex-fields params f flexible-fields path value-path]]
          [formic-flex-add params (:add classes) flex next f path]
          (when err
-           [:div.error-wrapper
-            {:class (:err-wrapper classes)}
-            [:h4.error
-             {:class (:err-label classes)}
-             err]])]))))
+           [formic-inputs/error-label {:err err
+                                       :classes classes}])]))))
 
 ;; Basic fields
 ;; --------------------------------------------------------------
