@@ -123,11 +123,11 @@
   (when (not @found)
     (let [f (get-in state path)]
       (cond
-       (:compound f)
-       (-validate-all-compound found state path value-path)
-       (:flex f)
-       (-validate-all-flexible found state path value-path)
-       :else nil))))
+        (:compound f)
+        (-validate-all-compound found state path value-path)
+        (:flex f)
+        (-validate-all-flexible found state path value-path)
+        :else nil))))
 
 (defn validate-all
   "Walks the form state hashmap and returns the first path/error it finds.
