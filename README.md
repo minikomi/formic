@@ -7,16 +7,15 @@
 * Form Schema + Initial values = Live form state
 * Aliasing of fields for common patterns
 * Real time validation using [funcool.struct](http://funcool.github.io/struct/latest/)
-* Parsers & Serialization for each field
-  - Sometimes you don't control the data you get
+* Parsers & Serialization definable for each field
 * Grouped fields, with validation
   - Validate grouped fields together
 * Flexible fields
-  - Grow, re-arrange, delete fields
+  - Add, re-arrange, delete fields
   - Validate as an array of values
 * Server side validation using the same form schema
 * Global error atom
-* Atomic styles eg. Tachyon
+* Support for atomic styles eg. [Tachyons](https://tachyons.io/).
 
 #### Simple Fields
 
