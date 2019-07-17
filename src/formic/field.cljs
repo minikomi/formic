@@ -9,7 +9,9 @@
 ;; touch all
 ;; -------------------------------------------------------------
 
-(defn touch-all! [form-state]
+(defn touch-all!
+  "Walks a form state atom hash-map and sets all touched entries to true"
+  [form-state]
   (swap!
    (:state form-state)
    (fn [fs]
@@ -35,8 +37,7 @@
   {:id id
    :field-type field-type
    :value (as-> (:value field) v
-            (filter #(and (not (nil? (:value %)))
-                          (not (:view %))) v)
+            (remove #(or (nil? (:value %)) (:view %)) v)
             (map (juxt :id :value) v)
             (into {} v)
             (serializer v)
@@ -60,7 +61,7 @@
 (defn serialize [form-state]
   (->> (w/postwalk -serialize @(:state form-state))
        (map (juxt :id :value))
-       (filter second)
+       (remove #(nil? (second %)))
        (into {})))
 
 ;; error handling
