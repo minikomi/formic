@@ -144,15 +144,27 @@
 
 ;; field prep
 ;; --------------------------------------------------------------
+;; functions for building the state atom out of schema and values
+;;
+;; fields are either
+;;   - compound - groups of fields
+;;   - flex     - arrays of fields
+;;   - view     - special read-only fields on compound fields
+;;   - basic    - none of the above
 
 (declare prepare-field)
 
-(defn gen-f-title [f]
+(defn gen-f-title
+  "Generates a title for a field if none is set"
+  [f]
   (or (:title f)
       (str/capitalize (formic-util/format-kw (:id f)))
       (str/capitalize (formic-util/format-kw (:field-type f)))))
 
-(defn update-state! [state path full-f]
+(defn update-state!
+  "Adding field to state atom.
+   Special handling for flex/top level fields."
+  [state path full-f]
   (if (and (number? (peek path))
            (not (get-in @state path)))
     (swap! state
@@ -164,10 +176,7 @@
 
 (defn prepare-field-basic [{:keys [schema values state f path value-path] :as params}]
   (let [default-value     (or (:default f)
-                              (get-in schema [:defaults (:field-type f)])
-                              (when (and (:choices (:options f))
-                                         (map? f))
-                                (ffirst (:choices (:options f)))))
+                              (get-in schema [:defaults (:field-type f)]))
         raw-initial-value (get-in values value-path)
         title             (gen-f-title f)
         parser            (or (:parser f)
@@ -205,14 +214,15 @@
 
 (defn prepare-field-compound [{:keys [schema state values f path value-path] :as params}]
   (let [id              (:id f)
-        classes         (or (:classes f) (get-in schema [:classes :compound]))
+        classes         (or (:classes f)
+                            (get-in schema [:classes (:field-type f)])
+                            (get-in schema [:classes :compound]))
         compound-fields (:fields f)
         serializer      (or (:serializer f) identity)
         validation      (:validation f)
         options         (merge (get-in schema [:options :compound]) (:options f))
         collapsable     (:collapsable options)
-        collapsed       (r/atom (when collapsable
-                                  (boolean (:collapsed options))))]
+        collapsed       (r/atom (when collapsable (boolean (:collapsed options))))]
     (update-state! state path
                    {:id              (:id f)
                     :field-type      (:field-type f)
@@ -233,15 +243,17 @@
       (prepare-field params))))
 
 (defn prepare-field-flexible [{:keys [schema values state f path value-path] :as params}]
-  (let [classes     (or (:classes f) (get-in schema [:classes :flex]))
-        options     (merge (get-in schema [:options :flex]) (:options f))
-        validation  (:validation f)
+  (let [classes         (or (:classes f)
+                            (get-in schema [:classes (:field-type f)])
+                            (get-in schema [:classes :flex]))
+        options         (merge (get-in schema [:options :flex]) (:options f))
+        validation      (:validation f)
         raw-flex-values (get-in values value-path)
-        flex-values (if (vector? raw-flex-values)
-                      (filter #((set (:flex f)) (:field-type %))
-                              (get-in values value-path))
-                      [])
-        touched     (not= [] flex-values)]
+        flex-values     (if (vector? raw-flex-values)
+                          (filter #((set (:flex f)) (:field-type %))
+                                  (get-in values value-path))
+                          [])
+        touched         (not= [] flex-values)]
     (update-state! state path
                    {:id         (:id f)
                     :flex       (:flex f)
@@ -251,9 +263,9 @@
                     :value      flex-values
                     :validation validation
                     :touched    touched})
-    (doseq [n    (range (count flex-values))
-            :let [ff (get flex-values n)
-                  field-type (keyword (:field-type ff))]
+    (doseq [n     (range (count flex-values))
+            :let  [ff (get flex-values n)
+                   field-type (keyword (:field-type ff))]
             :when [contains? (:flex f) field-type]]
       (let [field-id (keyword (str/join "-" [(name (:id f)) n (name field-type)]))
             ff       (assoc ff :id field-id)
@@ -335,7 +347,9 @@
 ;; flex
 ;; --------------------------------------------------------------
 
-(defn add-field [{:keys [state] :as params} f path next field-type]
+(defn add-field
+  ;; creates a new field of field-type and adds it to flex field f
+  [{:keys [state] :as params} f path next field-type]
   (let [new-field-id (str (name (:id f)) "-" @next "-" (name field-type))
         new-field {:id new-field-id
                    :title (formic-util/format-kw field-type)
