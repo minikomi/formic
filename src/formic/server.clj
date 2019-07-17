@@ -6,8 +6,6 @@
 
 (defn -validate-node [state values path value-path]
   (let [f (get-in @state path)]
-    (println "--validate-field")
-    (pprint/pprint f)
     (if-let [msg
              (first (st/validate-single (get-in values value-path)
                                         (:validation (get-in @state path))))]
@@ -51,8 +49,6 @@
                       value-path)))
 
 (defn -validate-values [schema state values path value-path]
-  (println "-------")
-  (pprint/pprint @state)
   (let [f (get-in @state path)
         v (get-in values value-path)]
     (cond

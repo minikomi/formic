@@ -116,11 +116,9 @@
   (let [field (get-in state path)
         err (and (:validation field)
                  (first (st/validate-single (:value field) (:validation field))))]
-    (println err)
     (when err (vreset! found [value-path err]))))
 
 (defn -validate-all [found state path value-path]
-  (println "VA" path)
   (-validate-all-single found state path value-path)
   (when (not @found)
     (let [f (get-in state path)]
