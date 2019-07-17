@@ -75,7 +75,13 @@
              [{:id :main-color
                :field-type :string}
               {:id :logo-color
-               :field-type :string}]
+               :field-type :string}
+              {:id :full-name
+               :view [:first-name :last-name]
+               :component
+               (fn [first-name last-name]
+                 (when (and first-name last-name)
+                   [:h6 (str first-name " " last-name " will be coming!")]))}]
              :validation
              [{:message "Colors must not be the same"
                :validate (fn [{:keys [main-color logo-color]}]
