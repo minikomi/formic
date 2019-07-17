@@ -67,7 +67,7 @@
 
 (defn validate-values
   "Validates values against a form schema.
-   Will return nil if none or found, or throw an exception with the first found value.
+   Will return nil if none or found, or throw an exception with the first found err msg.
    Exception info contains:
      - :value-path
      - :path
