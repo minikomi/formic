@@ -49,6 +49,7 @@
                            :disabled #{:d}}}
              {:field-type :radios
               :id         :radios-field
+              :default    :am
               :options    {:choices [[:am "AM"]
                                      [:fm "FM"]
                                      [:uhf "UHF"]]}}
@@ -81,7 +82,7 @@
                :component
                (fn [first-name last-name]
                  (when (and first-name last-name)
-                   [:h6 (str first-name " " last-name " will be coming!")]))}]
+                   [:h6 (str "Oh! " first-name " " last-name " will be coming!")]))}]
              :validation
              [{:message "Colors must not be the same"
                :validate (fn [{:keys [main-color logo-color]}]
