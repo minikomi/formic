@@ -319,7 +319,7 @@
     parser     (update :parsers     formic-util/assoc-if-new field-type parser)
     serializer (update :serializers formic-util/assoc-if-new field-type serializer)
     default    (update :defaults    formic-util/assoc-if-new field-type default)
-    validation (update :validation  formic-util/assoc-if-new field-type validation)))
+    ))
 
 (defn prepare-state
   "Takes a form schema and optional options map and returns
