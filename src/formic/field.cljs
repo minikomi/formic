@@ -51,7 +51,6 @@
                (mapv (fn [{:keys [field-type value] :as f}]
                        {:field-type (or (::aliased (meta f)) field-type)
                         :value value}))
-               (filterv #(not-empty (:value %)))
                not-empty)})
 
 (defn -serialize [field]
