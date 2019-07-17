@@ -159,10 +159,10 @@
        :string-field-required "gggg"}}}]})
                       
 (defn live-form []
-  (let [form-state (formic-field/prepare-state
+  (let [form-state (formic.field/prepare-state
                     form-schema-sink 
                     {:values form-values-sink})]
     (fn []
       [:form
-       [formic-fronted/fields form-state]])))
+       [formic.frontend/fields form-state]])))
 ```
