@@ -22,8 +22,7 @@
 
 ``` cljs
 (def form-schema
-  {:classes form-styles/combined
-   :fields  [{:field-type :string
+  {:fields  [{:field-type :string
               :id         :string-field
               :validation [st/required]}
              {:field-type :email
