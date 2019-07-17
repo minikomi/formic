@@ -271,16 +271,14 @@
                    field-type (keyword (:field-type ff))]
             :when [contains? (:flex f) field-type]]
       (let [field-id (keyword (str/join "-" [(name (:id f)) n (name field-type)]))
-            ff       (assoc ff :id field-id)
+            ff       (assoc ff
+                            :id field-id
+                            :title (formic-util/format-kw field-type))
             params   (assoc params
                             :f ff
                             :path (conj path :value n)
                             :value-path (conj value-path n :value))]
         (prepare-field params)))))
-
-
-
-
 
 (defn prepare-field-view [{:keys [state schema f path]}]
   (update-state!

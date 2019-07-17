@@ -65,5 +65,3 @@
       [:form
        [formic-fronted/fields form-state]])))
 ```
-
-
