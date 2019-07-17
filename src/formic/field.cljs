@@ -356,8 +356,8 @@
 
 (defn add-field
   ;; creates a new field of field-type and adds it to flex field f
-  [{:keys [state] :as params} f path next field-type]
-  (let [new-field-id (str (name (:id f)) "-" @next "-" (name field-type))
+  [{:keys [state] :as params} f path field-type]
+  (let [new-field-id (str (name (:id f)) "-" (random-uuid) "-" (name field-type))
         new-field {:id new-field-id
                    :title (formic-util/format-kw field-type)
                    :field-type field-type}
@@ -375,5 +375,4 @@
      (assoc params
             :f new-field
             :path new-field-path
-            :value-path new-value-path))
-    (swap! next inc)))
+            :value-path new-value-path))))

@@ -125,9 +125,9 @@
           (swap! flexible-fields formic-util/vremove n))}
        "✗"]]]))
 
-(defn formic-flex-fields [{:keys [state] :as params} f flexible-fields path value-path]
+(defn formic-flex-fields [{:keys [state] :as form-state} f flexible-fields path value-path]
   (let [classes (:classes f)]
-    (fn [{:keys [state] :as params} f flexible-fields path value-path]
+    (fn [{:keys [state] :as form-state} f flexible-fields path value-path]
       [:ul.formic-flex-fields
        {:class (:fields-list classes)}
        [flip-move
@@ -139,33 +139,34 @@
            [:li.formic-flex-field
             {:class (:fields-item classes)}
             [flexible-controls (:controls classes) flexible-fields n]
-            [field params ff (conj path :value n) (conj value-path n)]]))]])))
+            [field form-state ff (conj path :value n) (conj value-path n)]]))]])))
 
-(defn formic-flex-add [params classes flex-types next f path]
-  [:div
-   [:ul.formic-flex-add
-    {:class (:list classes)}
-    (doall
-     (for [field-type flex-types]
-       ^{:key field-type}
-       [:li
-        {:class (:item classes)}
-        [:a.button
-         {:class (:button classes)
-          :href  "#"
-          :on-click
-          (fn [ev]
-            (.preventDefault ev)
-            (formic-field/add-field params
-                                    f
-                                    path
-                                    next
-                                    field-type))}
-         [:span.plus "+"]
-         (formic-util/format-kw field-type)]]))]])
+(defn formic-flex-add [{:keys [state schema] :as form-state}
+                       classes flex-types f path]
+  (fn [{:keys [state schema] :as form-state}
+       classes flex-types f path]
+    [:div
+     [:ul.formic-flex-add
+      {:class (:list classes)}
+      (for [field-type flex-types]
+        ^{:key field-type}
+        [:li
+         {:class (:item classes)}
+         [:a.button
+          {:class (:button classes)
+           :href  "#"
+           :on-click
+           (fn [ev]
+             (.preventDefault ev)
+             (formic-field/add-field form-state
+                                     f
+                                     path
+                                     field-type))}
+          [:span.plus "+"]
+          (formic-util/format-kw field-type)]])]]))
 
-(defn flexible-field [{:keys [state errors compound schema] :as params} f path value-path]
-  (let [next (r/atom (or (count (:value (get-in @state path))) 0))]
+(defn flexible-field [{:keys [state] :as form-state} f path value-path]
+  (let []
     (fn [{:keys [state compound] :as form-state} f path value-path]
       (let [flexible-fields (r/cursor state (conj path :value))
             {:keys [classes flex]} f
@@ -183,8 +184,8 @@
           [:h4.formic-flex-title
            {:class (:title classes)}
            (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
-          [formic-flex-fields params f flexible-fields path value-path]]
-         [formic-flex-add params (:add classes) flex next f path]
+          [formic-flex-fields form-state f flexible-fields path value-path]]
+         [formic-flex-add form-state (:add classes) flex f path]
          (when err
            [formic-inputs/error-label {:err err
                                        :classes classes}])]))))
