@@ -42,12 +42,10 @@
     (let [{:keys [collapsable collapsed validation classes]} f
           value (get-in @state (conj path :value))
           err (formic-field/validate-field form-state f path value-path)]
-
       [:fieldset.formic-compound
-
        {:class (if err
                  (formic-util/conjv
-                  (or (:err-fieldset classes)
+                  (or (:error-fieldset classes)
                       (:fieldset classes))
                   :formic-error)
                  (:fieldset classes))}

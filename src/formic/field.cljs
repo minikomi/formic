@@ -214,9 +214,10 @@
 
 (defn prepare-field-compound [{:keys [schema state values f path value-path] :as params}]
   (let [id              (:id f)
-        classes         (or (:classes f)
-                            (get-in schema [:classes (:field-type f)])
-                            (get-in schema [:classes :compound]))
+        classes         (merge
+                         (get-in schema [:classes :compound])
+                         (get-in schema [:classes :field-types (:field-type f)])
+                         (:classes f))
         compound-fields (:fields f)
         serializer      (or (:serializer f) identity)
         validation      (:validation f)
@@ -243,9 +244,10 @@
       (prepare-field params))))
 
 (defn prepare-field-flexible [{:keys [schema values state f path value-path] :as params}]
-  (let [classes         (or (:classes f)
-                            (get-in schema [:classes (:field-type f)])
-                            (get-in schema [:classes :flex]))
+  (let [classes         (merge
+                         (get-in schema [:classes :flex])
+                         (get-in schema [:classes :field-types (:field-type f)])
+                         (:classes f))
         options         (merge (get-in schema [:options :flex]) (:options f))
         validation      (:validation f)
         raw-flex-values (get-in values value-path)
