@@ -21,7 +21,7 @@
       [:div.formic-input
        {:class (formic-util/make-path-id f)}
        [wrapper-tag
-        {:class (formic-util/conjv (:formic-input-label classes) :formic-input-label)}
+        {:class (formic-util/conjv (:label classes) :formic-input-label)}
         [:h5.formic-input-title {:class (:title classes)} title]
         body
         [error-label f]]])))
