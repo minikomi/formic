@@ -53,7 +53,7 @@
                  (:fieldset classes))}
        [formic-compound-title f]
        (when-not (and collapsable @collapsed)
-         [:ul.formic-formic-compound-fields
+         [:ul.formic-compound-fields
           {:class (:fields-list classes)}
           (doall
            (for [n (range (count value))
@@ -78,68 +78,69 @@
 ;; --------------------------------------------------------------
 
 (defn flexible-controls [classes flexible-fields n]
-  (let [is-first (= n 0)
-        is-last  (= (-> flexible-fields deref count dec) n)]
-    [:ul.formic-flex-controls-wrapper
-     {:class (:wrapper classes)}
-     (let [is-disabled (or (= 1 (count @flexible-fields)) (= 0 n))]
-       [:li.up.move
-        {:class (if is-disabled
-                  (:move-disabled classes)
-                  (:move classes))}
-        [:a
+  (fn [classes flexible-fields n]
+   (let [is-first (= n 0)
+         is-last  (= (-> flexible-fields deref count dec) n)]
+     [:ul.formic-flex-controls-wrapper
+      {:class (:wrapper classes)}
+      (let [is-disabled (or (= 1 (count @flexible-fields)) (= 0 n))]
+        [:li.up.move
          {:class (if is-disabled
-                   (:move-button-disabled classes)
-                   (:move-button classes))
-          :href  "#"
-          :on-click
-          (fn [ev]
-            (.preventDefault ev)
-            (when (and (< 0 (count @flexible-fields)) (< 0 n))
-              (swap! flexible-fields formic-util/vswap (dec n) n)))}
-         "↑"]])
-     (let [is-disabled (= n (dec (count @flexible-fields)))]
-       [:li.down.move
-        {:class (if is-disabled
-                  (:move-disabled classes)
-                  (:move classes))}
-        [:a
+                   (:move-disabled classes)
+                   (:move classes))}
+         [:a
+          {:class (if is-disabled
+                    (:move-button-disabled classes)
+                    (:move-button classes))
+           :href  "#"
+           :on-click
+           (fn [ev]
+             (.preventDefault ev)
+             (when (and (< 0 (count @flexible-fields)) (< 0 n))
+               (swap! flexible-fields formic-util/vswap (dec n) n)))}
+          "↑"]])
+      (let [is-disabled (= n (dec (count @flexible-fields)))]
+        [:li.down.move
          {:class (if is-disabled
-                   (:move-button-disabled classes)
-                   (:move-button classes))
-          :href  "#"
-          :on-click
-          (fn [ev]
-            (.preventDefault ev)
-            (when (not= n (dec (count @flexible-fields)))
-              (swap! flexible-fields formic-util/vswap n (inc n))))}
-         "↓"]])
-     [:li.delete
-      {:class (:delete classes)}
-      [:a
-       {:class (:delete-button classes)
-        :href  "#"
-        :on-click
-        (fn [ev]
-          (.preventDefault ev)
-          (swap! flexible-fields formic-util/vremove n))}
-       "✗"]]]))
+                   (:move-disabled classes)
+                   (:move classes))}
+         [:a
+          {:class (if is-disabled
+                    (:move-button-disabled classes)
+                    (:move-button classes))
+           :href  "#"
+           :on-click
+           (fn [ev]
+             (.preventDefault ev)
+             (when (not= n (dec (count @flexible-fields)))
+               (swap! flexible-fields formic-util/vswap n (inc n))))}
+          "↓"]])
+      [:li.delete
+       {:class (:delete classes)}
+       [:a
+        {:class (:delete-button classes)
+         :href  "#"
+         :on-click
+         (fn [ev]
+           (.preventDefault ev)
+           (swap! flexible-fields formic-util/vremove n))}
+        "✗"]]])))
 
 (defn formic-flex-fields [{:keys [state] :as form-state} f flexible-fields path value-path]
-  (let [classes (:classes f)]
-    (fn [{:keys [state] :as form-state} f flexible-fields path value-path]
-      [:ul.formic-flex-fields
-       {:class (:fields-list classes)}
-       [flip-move
-        (get-in f [:options :flip-move] DEFAULT_FLIP_MOVE_OPTIONS)
-        (doall
-         (for [n (range (count @flexible-fields))
-               :let  [ff (get @flexible-fields n)]]
-           ^{:key (:id ff)}
-           [:li.formic-flex-field
-            {:class (:fields-item classes)}
-            [flexible-controls (:controls classes) flexible-fields n]
-            [field form-state ff (conj path :value n) (conj value-path n)]]))]])))
+  (fn [{:keys [state] :as form-state} f flexible-fields path value-path]
+    (let [classes (:classes f)]
+     [:ul.formic-flex-fields
+      {:class (:fields-list classes)}
+      [flip-move
+       (get-in f [:options :flip-move] DEFAULT_FLIP_MOVE_OPTIONS)
+       (doall
+        (for [n (range (count @flexible-fields))
+              :let  [ff (get @flexible-fields n)]]
+          ^{:key (:id ff)}
+          [:li.formic-flex-field
+           {:class (:fields-item classes)}
+           [flexible-controls (:controls classes) flexible-fields n]
+           [field form-state ff (conj path :value n) (conj value-path n)]]))]])))
 
 (defn formic-flex-add [{:keys [state schema] :as form-state}
                        classes flex-types f path]
@@ -166,29 +167,29 @@
           (formic-util/format-kw field-type)]])]]))
 
 (defn flexible-field [{:keys [state] :as form-state} f path value-path]
-  (let []
-    (fn [{:keys [state compound] :as form-state} f path value-path]
-      (let [flexible-fields (r/cursor state (conj path :value))
-            {:keys [classes flex]} f
-            err (formic-field/validate-field
-                 form-state f path value-path)]
-        [:fieldset.formic-flex
-         {:class (if err
-                   (formic-util/conjv
-                    (or (:error-fieldset classes)
-                        (:fieldset classes))
-                    :formic-error)
-                   (:fieldset classes))}
-         [:div.formic-flex-fields-wrapper
-          {:class (:fields-wrapper classes)}
-          [:h4.formic-flex-title
-           {:class (:title classes)}
-           (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
-          [formic-flex-fields form-state f flexible-fields path value-path]]
-         [formic-flex-add form-state (:add classes) flex f path]
-         (when err
-           [formic-inputs/error-label {:err err
-                                       :classes classes}])]))))
+  (fn [{:keys [state compound] :as form-state} f path value-path]
+    (let [flexible-fields (r/cursor state (conj path :value))
+          {:keys [classes flex]} f
+          err (formic-field/validate-field
+               form-state f path value-path)]
+      [:fieldset.formic-flex
+       {:class (if err
+                 (formic-util/conjv
+                  (or (:error-fieldset classes)
+                      (:fieldset classes))
+                  :formic-error)
+                 (:fieldset classes))}
+       [:div.formic-flex-fields-wrapper
+        {:class (:fields-wrapper classes)}
+        [:h4.formic-flex-title
+         {:class (:title classes)}
+         (or (:title f) (s/capitalize (formic-util/format-kw (:id f))))]
+        (when (not-empty @flexible-fields)
+          [formic-flex-fields form-state f flexible-fields path value-path])]
+       [formic-flex-add form-state (:add classes) flex f path]
+       (when err
+         [formic-inputs/error-label {:err err
+                                     :classes classes}])])))
 
 ;; Basic fields
 ;; --------------------------------------------------------------
