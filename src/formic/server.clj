@@ -4,7 +4,7 @@
             [clojure.walk :as walk]
             [clojure.pprint :as pprint]))
 
-(defn -validate-node [state values path value-path]
+(defn- -validate-node [state values path value-path]
   (let [f (get-in @state path)]
     (if-let [msg
              (first (st/validate-single (get-in values value-path)
@@ -16,7 +16,7 @@
 
 (declare -validate-values)
 
-(defn -validate-flex [schema state values path value-path]
+(defn- -validate-flex [schema state values path value-path]
   (-validate-node state values path value-path)
   (vswap! state assoc-in (conj path :value) [])
   (let [val (get-in values value-path)]
@@ -27,7 +27,7 @@
                         (conj path :value n)
                         (conj value-path n :value)))))
 
-(defn -validate-compound [schema state values path value-path]
+(defn- -validate-compound [schema state values path value-path]
   (-validate-node state values path value-path)
   (let [f (get-in @state path)]
     (doseq [n (range (count (:fields f)))
@@ -36,7 +36,7 @@
                         (conj path :fields n)
                         (conj value-path (:id cf))))))
 
-(defn -validate-replace [schema state values path value-path]
+(defn- -validate-replace [schema state values path value-path]
   (let [f (get-in @state path)
         field-type (:field-type f)
         rf (get-in schema [:field-types field-type])]
@@ -45,7 +45,7 @@
                       path
                       value-path)))
 
-(defn -validate-values [schema state values path value-path]
+(defn- -validate-values [schema state values path value-path]
   (let [f (get-in @state path)
         v (get-in values value-path)]
     (cond
