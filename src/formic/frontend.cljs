@@ -19,7 +19,7 @@
    :leave-animation false
    :enter-animation "fade"})
 
-(defonce *debug* (r/atom false))
+(defonce :^dynamic *debug* (r/atom false))
 
 ;; Compound fields
 ;; --------------------------------------------------------------
