@@ -2,7 +2,6 @@
   (:require [formic.components.inputs :as formic-inputs]
             [formic.util :as formic-util]
             [formic.field :as formic-field]
-            [datafrisk.core :as d]
             [goog.dom :as gdom]
             [cljsjs.react-flip-move]
             [reagent.core :as r]
@@ -19,7 +18,7 @@
    :leave-animation false
    :enter-animation "fade"})
 
-(defonce :^dynamic *debug* (r/atom false))
+(def ^:dynamic *debug* false)
 
 ;; Compound fields
 ;; --------------------------------------------------------------
@@ -59,7 +58,7 @@
              ^{:key n}
              [:li
               {:class (:fields-item classes)}
-              (when @*debug*
+              (when *debug*
                 [:pre (with-out-str
                         (pprint f)
                         (pprint path)
@@ -248,13 +247,6 @@
           :let [f (get @state n)]]
       ^{:key n}
       [field form-state f [n] [(:id f)]]))])
-
-;; Helper
-;; --------------------------------------------------------------
-
-(defn debug-state [{:keys [state]}]
-  (when goog.DEBUG
-    [d/DataFriskShell @state]))
 
 ;; Error / state walking
 ;; --------------------------------------------------------------

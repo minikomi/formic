@@ -11,3 +11,5 @@ pom.xml.asc
 .hgignore
 .hg/
 .DS_Store
+.cpcache/
+cljs-test-runner-out/
