@@ -49,7 +49,7 @@
        "apple" :value
        true    :touched))))
 
-;; classes
+;; Basic Classes
 ;; -------------------------------------------------------------------
 
 (def common-title-styles
@@ -128,16 +128,33 @@
        :id         :email-field2}]}]
    :classes combined-compound-classes})
 
+(def compound-values
+  {:string-field "string 1"
+   :email-field "email 1"})
+
 (deftest compound-field
-  (let [state @(:state (field/prepare-state compound-fields))
-        f (first state)]
-    (cljs.pprint/pprint f)
-    (testing "compound field general properties"
-      (t/is (= :compound-field (:id f)))
-      (t/is (:compound f))
-      (t/is (= identity (:serializer f)))
-      (t/is (vector? (:value f)))
-      (t/is (nil? @(:collapsed f)))
-      (t/is (= [:string-field :email-field :email-field2]
-               (mapv :id (:value f))))
-      (t/is (= compound-styles (:classes f))))))
+  (testing "compound field general properties"
+   (let [state @(:state (field/prepare-state compound-fields))
+         f (first state)]
+
+     (t/is (= :compound-field (:id f)))
+     (t/is (:compound f))
+     (t/is (= identity (:serializer f)))
+     (t/is (vector? (:value f)))
+     (t/is (nil? @(:collapsed f)))
+     (t/is (= [:string-field :email-field :email-field2]
+              (mapv :id (:value f))))
+     (t/is (= compound-styles (:classes f)))))
+  (testing "compound field values population"
+    (let [state @(:state (field/prepare-state
+                          compound-fields
+                          {:values {:compound-field compound-values}}))
+          f (first state)
+          f-value (:value f)]
+     (t/is (= compound-values
+              (->> f-value
+                   (map (juxt :id :value))
+                   (filter second)
+                   (into {}))))
+     (t/is (= [true true false]
+              (mapv :touched f-value))))))
