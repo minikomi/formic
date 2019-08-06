@@ -269,7 +269,9 @@
     (doseq [n     (range (count flex-values))
             :let  [ff (nth flex-values n)
                    field-type (keyword (:field-type ff))]]
-      (let [field-id (keyword (str/join "-" [(name (:id f)) n (name field-type)]))
+      (let [field-id (keyword (str/join "-" [(name (:id f))
+                                             (random-uuid)
+                                             (name field-type)]))
             ff       (assoc ff
                             :id field-id
                             :title (formic-util/format-kw field-type))
@@ -358,25 +360,43 @@
 ;; flex
 ;; --------------------------------------------------------------
 
-(defn add-field
+(defn add-field!
   ;; creates a new field of field-type and adds it to flex field f
   [{:keys [state] :as params} f path field-type]
-  (let [new-field-id (str (name (:id f)) "-" (random-uuid) "-" (name field-type))
-        new-field {:id new-field-id
-                   :title (formic-util/format-kw field-type)
-                   :field-type field-type}
-        n         (count (get-in @(:state params) (conj path :value)))
-        new-field-path (conj path :value n)
-        new-value-path (conj (:value-path f) n)]
-    (swap! state
-           assoc-in (conj path :touched)
-           true)
-    (swap! state
-           update-in (conj path :value)
-           formic-util/conjv
-           new-field)
-    (prepare-field
-     (assoc params
-            :f new-field
-            :path new-field-path
-            :value-path new-value-path))))
+  (when (contains? (set (:flex f)) field-type)
+   (let [new-field-id (str (name (:id f)) "-" (random-uuid) "-" (name field-type))
+         new-field {:id new-field-id
+                    :title (formic-util/format-kw field-type)
+                    :field-type field-type}
+         n         (count (get-in @(:state params) (conj path :value)))
+         new-field-path (conj path :value n)
+         new-value-path (conj (:value-path f) n)]
+     (swap! state
+            assoc-in (conj path :touched)
+            true)
+     (swap! state
+            update-in (conj path :value)
+            formic-util/conjv
+            new-field)
+     (prepare-field
+      (assoc params
+             :f new-field
+             :path new-field-path
+             :value-path new-value-path)))))
+
+(defn vector-swap
+  "swaps the position of two members in a vector"
+  [v a b]
+  (assoc v b (v a) a (v b)))
+
+(defn vector-delete
+  "removes an item from a vector"
+  [v n]
+  (into (subvec v 0 n)
+        (subvec v (inc n))))
+
+(defn swap-fields! [flexible-fields a b]
+  (swap! flexible-fields vector-swap a b))
+
+(defn delete-field! [flexible-fields n]
+  (swap! flexible-fields vector-delete n))

@@ -46,28 +46,6 @@
   [coll v]
   (if (vector? coll) (conj coll v) [v]))
 
-(defn vswap
-  "swaps the position of two members in a vector"
-  [v a b]
-  (assoc v b (v a) a (v b)))
-
-(defn vremove
-  "removes an item from a vector"
-  [v n]
-  (into (subvec v 0 n)
-        (subvec v (inc n))))
-
-(defn vinsert
-  "inserts an item a pos into a vector"
-  [v el pos]
-  (reduce into [(subvec v 0 pos) [el] (subvec v pos)]))
-
-(defn vmove
-  "moves an item within a vector from a to b"
-  [v a b]
-  (let [vremoved (vremove v a)]
-    (vinsert vremoved (v a) b)))
-
 (defn assoc-if-new
   "Assocs in m only if the key k does't exist"
   [m k v]

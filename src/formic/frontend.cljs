@@ -94,7 +94,7 @@
            (fn [ev]
              (.preventDefault ev)
              (when (and (< 0 (count @flexible-fields)) (< 0 n))
-               (swap! flexible-fields formic-util/vswap (dec n) n)))}
+               (formic-field/swap-fields! flexible-fields (dec n) n)))}
           "↑"]])
       (let [is-disabled (= n (dec (count @flexible-fields)))]
         [:li.down.move
@@ -110,7 +110,7 @@
            (fn [ev]
              (.preventDefault ev)
              (when (not= n (dec (count @flexible-fields)))
-               (swap! flexible-fields formic-util/vswap n (inc n))))}
+               (formic-field/swap-fields! flexible-fields n (inc n))))}
           "↓"]])
       [:li.delete
        {:class (:delete classes)}
@@ -120,7 +120,8 @@
          :on-click
          (fn [ev]
            (.preventDefault ev)
-           (swap! flexible-fields formic-util/vremove n))}
+           (formic-field/remove-field! flexible-fields n)
+           )}
         "✗"]]])))
 
 (defn formic-flex-fields [{:keys [state] :as form-state} f flexible-fields path value-path]
@@ -156,10 +157,10 @@
            :on-click
            (fn [ev]
              (.preventDefault ev)
-             (formic-field/add-field form-state
-                                     f
-                                     path
-                                     field-type))}
+             (formic-field/add-field! form-state
+                                      f
+                                      path
+                                      field-type))}
           [:span.plus "+"]
           (formic-util/format-kw field-type)]])]]))
 

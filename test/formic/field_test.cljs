@@ -3,6 +3,7 @@
              :refer [testing deftest]]
             [formic.field :as field]
             [formic.components.inputs :as inputs]
+            [reagent.core :as reagent]
             [struct.core :as st]))
 
 (def basic
@@ -215,10 +216,10 @@
       (t/is (= [] (:value f)))
       (t/is (false? (:touched f)))
       (t/is (= flex-styles (:classes f)))))
-  (let [state @(:state (field/prepare-state
-                        flex-fields
-                        {:values {:flex-field flex-values}}))
-        f (first state)]
+  (let [prepared-form (field/prepare-state
+                       flex-fields
+                       {:values {:flex-field flex-values}})
+        f (first @(:state prepared-form))]
     (testing "unknown field types are dropped when populating state"
       (t/is (= [:string :string :email :email]
                (mapv :field-type (:value f)))))
@@ -227,9 +228,22 @@
                                    flex-values))
                (map :value (:value f)))))
     (testing "automatic id's for values"
-      (t/is (= [:flex-field-0-string
-                :flex-field-1-string
-                :flex-field-2-email
-                :flex-field-3-email]
-               (mapv :id (:value f)))))
+      (t/is (apply distinct?
+                   (mapv :id (:value f)))))
+    (testing "Adding a field"
+      (field/add-field! prepared-form f [0] :string)
+      (t/is (= [:string :string :email :email :string]
+               (mapv :field-type (:value (first @(:state prepared-form))))))
+      (t/is (apply distinct?
+                   (mapv :id (:value f)))))
+    (let [flexible-fields (reagent/cursor (:state prepared-form) [0 :value])]
+      (testing "swap a field"
+        (field/swap-fields! flexible-fields 1 2)
+        (t/is (= [:string :email :string :email :string]
+                 (mapv :field-type (:value (first @(:state prepared-form)))))))
+      (testing "swap a field"
+        (field/delete-field! flexible-fields 1)
+        (t/is (= [:string :string :email :string]
+                 (mapv :field-type (:value (first @(:state prepared-form))))))))
+
     ))
