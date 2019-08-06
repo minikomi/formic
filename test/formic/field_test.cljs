@@ -111,7 +111,7 @@
    :error-label     [:compound-error-label]
    :error-fieldset  [:compound-error-fieldset]})
 
-(def compound-classes
+(def combined-compound-classes
   (assoc combined-basic-classes
          :compound compound-styles))
 
@@ -126,7 +126,7 @@
        :id         :email-field}
       {:field-type :email-override
        :id         :email-field2}]}]
-   :classes combined-basic-classes})
+   :classes combined-compound-classes})
 
 (deftest compound-field
   (let [state @(:state (field/prepare-state compound-fields))
@@ -139,4 +139,5 @@
       (t/is (vector? (:value f)))
       (t/is (nil? @(:collapsed f)))
       (t/is (= [:string-field :email-field :email-field2]
-               (mapv :id (:value f)))))))
+               (mapv :id (:value f))))
+      (t/is (= compound-styles (:classes f))))))
