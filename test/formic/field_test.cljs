@@ -11,15 +11,13 @@
      :id         :string-field
      :classes    {:input [:added-class1 :added-class2]}
      :options    {:key "value"}
-     :validation [st/required]
-     }]})
+     :validation [st/required]}]})
 
 (def basic-with-default
   {:fields
    [{:field-type :string
      :id :string-field
-     :default "banana"
-     }]})
+     :default "banana"}]})
 
 (deftest basic-fields
   (testing "default basic field state"
@@ -41,13 +39,13 @@
         "banana" :value
         false    :touched)))
   (testing "passing in values sets value; touched is true"
-   (let [state @(:state
-                 (field/prepare-state
-                  basic
-                  {:values {:string-field "apple"}}))]
-     (t/are [x y] (= x (get-in state [0 y]))
-       "apple" :value
-       true    :touched))))
+    (let [state @(:state
+                  (field/prepare-state
+                   basic
+                   {:values {:string-field "apple"}}))]
+      (t/are [x y] (= x (get-in state [0 y]))
+        "apple" :value
+        true    :touched))))
 
 ;; Basic Classes
 ;; -------------------------------------------------------------------
@@ -134,27 +132,27 @@
 
 (deftest compound-field
   (testing "compound field general properties"
-   (let [state @(:state (field/prepare-state compound-fields))
-         f (first state)]
+    (let [state @(:state (field/prepare-state compound-fields))
+          f (first state)]
 
-     (t/is (= :compound-field (:id f)))
-     (t/is (:compound f))
-     (t/is (= identity (:serializer f)))
-     (t/is (vector? (:value f)))
-     (t/is (nil? @(:collapsed f)))
-     (t/is (= [:string-field :email-field :email-field2]
-              (mapv :id (:value f))))
-     (t/is (= compound-styles (:classes f)))))
+      (t/is (= :compound-field (:id f)))
+      (t/is (:compound f))
+      (t/is (= identity (:serializer f)))
+      (t/is (vector? (:value f)))
+      (t/is (nil? @(:collapsed f)))
+      (t/is (= [:string-field :email-field :email-field2]
+               (mapv :id (:value f))))
+      (t/is (= compound-styles (:classes f)))))
   (testing "compound field values population"
     (let [state @(:state (field/prepare-state
                           compound-fields
                           {:values {:compound-field compound-values}}))
           f (first state)
           f-value (:value f)]
-     (t/is (= compound-values
-              (->> f-value
-                   (map (juxt :id :value))
-                   (filter second)
-                   (into {}))))
-     (t/is (= [true true false]
-              (mapv :touched f-value))))))
+      (t/is (= compound-values
+               (->> f-value
+                    (map (juxt :id :value))
+                    (filter second)
+                    (into {}))))
+      (t/is (= [true true false]
+               (mapv :touched f-value))))))
