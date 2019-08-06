@@ -54,9 +54,9 @@
   [:title-class])
 
 (def common-input-styles
-  {:title     common-title-styles
-   :label     [:label-class]
-   :input     [:input-class]
+  {:title       common-title-styles
+   :label       [:label-class]
+   :input       [:input-class]
    :error-label [:error-label-class]
    :error-input [:error-input-class]})
 
