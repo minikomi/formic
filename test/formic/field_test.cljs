@@ -216,4 +216,17 @@
           f (first state)]
       (t/is (= [] (:value f)))
       (t/is (false? (:touched f)))
-      (t/is (= flex-styles (:classes f))))))
+      (t/is (= flex-styles (:classes f)))))
+  (let [state @(:state (field/prepare-state
+                        flex-fields
+                        {:values {:flex-field flex-values}}))
+        f (first state)]
+    (cljs.pprint/pprint (:value f))
+    (testing "unknown field types are dropped when populating state"
+      (t/is (= [:string :string :email :email]
+               (mapv :field-type (:value f)))))
+    (testing "other values populate"
+      (t/is (= (map :value (filter #(not= :unknown-field-type (:field-type %))
+                                   flex-values))
+               (map :value (:value f)))))
+    ))
