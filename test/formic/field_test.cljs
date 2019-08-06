@@ -20,8 +20,8 @@
      :default "banana"}]})
 
 (deftest basic-fields
-  (testing "default basic field state"
-    (let [state @(:state (field/prepare-state basic))]
+  (let [state @(:state (field/prepare-state basic))]
+    (testing "default basic field state"
       (t/are [x y] (= x (get-in state [0 y]))
         :string                                :field-type
         {:input [:added-class1 :added-class2]} :classes
@@ -33,16 +33,16 @@
         "String field"                         :title
         inputs/validating-input                :component
         identity                               :serializer)))
-  (testing "default value sets value; touched remains false"
-    (let [state @(:state (field/prepare-state basic-with-default))]
+  (let [state @(:state (field/prepare-state basic-with-default))]
+    (testing "default value sets value; touched remains false"
       (t/are [x y] (= x (get-in state [0 y]))
         "banana" :value
         false    :touched)))
-  (testing "passing in values sets value; touched is true"
-    (let [state @(:state
-                  (field/prepare-state
-                   basic
-                   {:values {:string-field "apple"}}))]
+  (let [state @(:state
+                (field/prepare-state
+                 basic
+                 {:values {:string-field "apple"}}))]
+    (testing "passing in values sets value; touched is true"
       (t/are [x y] (= x (get-in state [0 y]))
         "apple" :value
         true    :touched))))
@@ -131,9 +131,9 @@
    :email-field "email@example.com"})
 
 (deftest compound-field
-  (testing "compound field general properties"
-    (let [state @(:state (field/prepare-state compound-fields))
-          f (first state)]
+  (let [state @(:state (field/prepare-state compound-fields))
+        f (first state)]
+    (testing "compound field general properties"
       (t/is (= :compound-field (:id f)))
       (t/is (true?             (:compound f)))
       (t/is (= identity        (:serializer f)))
@@ -142,12 +142,12 @@
       (t/is (= compound-styles (:classes f)))
       (t/is (= [:string-field :email-field :email-field2]
                (mapv :id (:value f))))))
-  (testing "compound field values population"
-    (let [f-value (-> @(:state (field/prepare-state
-                                compound-fields
-                                {:values {:compound-field compound-values}}))
-                      first
-                      :value)]
+  (let [f-value (-> @(:state (field/prepare-state
+                              compound-fields
+                              {:values {:compound-field compound-values}}))
+                    first
+                    :value)]
+    (testing "compound field values population"
       (t/is (= compound-values
                (->> f-value
                     (map (juxt :id :value))
@@ -209,9 +209,9 @@
     :value "field_4@example.com"}])
 
 (deftest flex-field
-  (testing "flex field general properties"
-    (let [state @(:state (field/prepare-state flex-fields))
-          f (first state)]
+  (let [state @(:state (field/prepare-state flex-fields))
+        f (first state)]
+    (testing "flex field general properties"
       (t/is (= [] (:value f)))
       (t/is (false? (:touched f)))
       (t/is (= flex-styles (:classes f)))))
@@ -231,4 +231,5 @@
                 :flex-field-1-string
                 :flex-field-2-email
                 :flex-field-3-email]
-               (mapv :id (:value f)))))))
+               (mapv :id (:value f)))))
+    ))
