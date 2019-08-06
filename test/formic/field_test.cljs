@@ -134,15 +134,14 @@
   (testing "compound field general properties"
     (let [state @(:state (field/prepare-state compound-fields))
           f (first state)]
-
       (t/is (= :compound-field (:id f)))
-      (t/is (:compound f))
-      (t/is (= identity (:serializer f)))
-      (t/is (vector? (:value f)))
-      (t/is (nil? @(:collapsed f)))
+      (t/is (true?             (:compound f)))
+      (t/is (= identity        (:serializer f)))
+      (t/is (vector?           (:value f)))
+      (t/is (nil?              @(:collapsed f)))
+      (t/is (= compound-styles (:classes f)))
       (t/is (= [:string-field :email-field :email-field2]
-               (mapv :id (:value f))))
-      (t/is (= compound-styles (:classes f)))))
+               (mapv :id (:value f))))))
   (testing "compound field values population"
     (let [state @(:state (field/prepare-state
                           compound-fields
