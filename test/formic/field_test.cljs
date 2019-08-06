@@ -70,7 +70,7 @@
    :field-types
    {:email email-classes}})
 
-(def override-input-classes
+(def override-basic-classes
   {:input [:override-input-class]})
 
 (def basic-with-classes
@@ -82,7 +82,7 @@
      :id         :email-field}
     {:field-type :email-override
      :id         :email-field
-     :classes    override-input-classes}]
+     :classes    override-basic-classes}]
    :classes combined-basic-classes})
 
 (deftest basic-field-classes
@@ -96,5 +96,47 @@
                (get-in state [1 :classes]))))
     (testing "overriden classes are combined"
       (t/is (= (merge common-input-styles
-                      override-input-classes)
+                      override-basic-classes)
                (get-in state [2 :classes]))))))
+
+;; Compound
+;; -------------------------------------------------------------------
+
+(def compound-styles
+  {:fieldset        [:compound-fieldset-class]
+   :title           [:compound-title-class]
+   :collapse-button [:compound-collapse-button-class]
+   :fields-list     [:comppound-fields-list-class]
+   :fields-item     [:compound-fields-item-class]
+   :error-label     [:compound-error-label]
+   :error-fieldset  [:compound-error-fieldset]})
+
+(def compound-classes
+  (assoc combined-basic-classes
+         :compound compound-styles))
+
+(def compound-fields
+  {:fields
+   [{:id :compound-field
+     :fields
+     [{:field-type :string
+       :id         :string-field
+       :options    {:key "value"}}
+      {:field-type :email
+       :id         :email-field}
+      {:field-type :email-override
+       :id         :email-field2}]}]
+   :classes combined-basic-classes})
+
+(deftest compound-field
+  (let [state @(:state (field/prepare-state compound-fields))
+        f (first state)]
+    (cljs.pprint/pprint f)
+    (testing "compound field general properties"
+      (t/is (= :compound-field (:id f)))
+      (t/is (:compound f))
+      (t/is (= identity (:serializer f)))
+      (t/is (vector? (:value f)))
+      (t/is (nil? @(:collapsed f)))
+      (t/is (= [:string-field :email-field :email-field2]
+               (mapv :id (:value f)))))))
