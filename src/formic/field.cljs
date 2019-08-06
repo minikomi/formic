@@ -251,10 +251,11 @@
         options         (merge (get-in schema [:options :flex]) (:options f))
         validation      (:validation f)
         raw-flex-values (get-in values value-path)
+        flex-set        (set (:flex f))
         flex-values     (if (vector? raw-flex-values)
-                          (filterv #((set (:flex f)) (:field-type %))
-                                   (get-in values value-path))
+                          (filterv #(flex-set (:field-type %)) raw-flex-values)
                           [])
+        updated-values  (assoc-in values value-path flex-values)
         touched         (not= [] flex-values)]
     (update-state! state path
                    {:id         (:id f)
@@ -262,13 +263,12 @@
                     :title      (gen-f-title f)
                     :classes    classes
                     :options    options
-                    :value      flex-values
+                    :value      []
                     :validation validation
                     :touched    touched})
     (doseq [n     (range (count flex-values))
             :let  [ff (nth flex-values n)
-                   field-type (keyword (:field-type ff))]
-            :when [contains? (:flex f) field-type]]
+                   field-type (keyword (:field-type ff))]]
       (let [field-id (keyword (str/join "-" [(name (:id f)) n (name field-type)]))
             ff       (assoc ff
                             :id field-id
@@ -276,7 +276,9 @@
             params   (assoc params
                             :f ff
                             :path (conj path :value n)
+                            :values updated-values
                             :value-path (conj value-path n :value))]
+        (swap! state update-in (conj path :value) conj ff)
         (prepare-field params)))))
 
 (defn prepare-field-view [{:keys [state schema f path]}]
