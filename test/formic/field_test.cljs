@@ -144,8 +144,8 @@
                (mapv :id (:value f))))))
   (testing "compound field values population"
     (let [f-value (-> @(:state (field/prepare-state
-                             compound-fields
-                             {:values {:compound-field compound-values}}))
+                                compound-fields
+                                {:values {:compound-field compound-values}}))
                       first
                       :value)]
       (t/is (= compound-values
@@ -163,7 +163,6 @@
   {:list   [:add-list-class]
    :item   [:add-item-class]
    :button [:add-button-class]})
-
 
 (def flex-controls-styles
   {:wrapper              [:wrapper-class]
@@ -194,8 +193,7 @@
 (def flex-fields
   {:fields
    [{:id :flex-field
-     :flex [:string :email]
-     }]
+     :flex [:string :email]}]
    :classes combined-flex-styles})
 
 (def flex-values
@@ -221,7 +219,6 @@
                         flex-fields
                         {:values {:flex-field flex-values}}))
         f (first state)]
-    (cljs.pprint/pprint (:value f))
     (testing "unknown field types are dropped when populating state"
       (t/is (= [:string :string :email :email]
                (mapv :field-type (:value f)))))
@@ -229,4 +226,9 @@
       (t/is (= (map :value (filter #(not= :unknown-field-type (:field-type %))
                                    flex-values))
                (map :value (:value f)))))
-    ))
+    (testing "automatic id's for values"
+      (t/is (= [:flex-field-0-string
+                :flex-field-1-string
+                :flex-field-2-email
+                :flex-field-3-email]
+               (mapv :id (:value f)))))))
