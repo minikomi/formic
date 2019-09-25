@@ -244,6 +244,4 @@
       (testing "swap a field"
         (field/delete-field! flexible-fields 1)
         (t/is (= [:string :string :email :string]
-                 (mapv :field-type (:value (first @(:state prepared-form))))))))
-
-    ))
+                 (mapv :field-type (:value (first @(:state prepared-form))))))))))

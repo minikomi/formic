@@ -120,7 +120,7 @@
          :on-click
          (fn [ev]
            (.preventDefault ev)
-           (formic-field/remove-field! flexible-fields n)
+           (formic-field/delete-field! flexible-fields n)
            )}
         "✗"]]])))
 
