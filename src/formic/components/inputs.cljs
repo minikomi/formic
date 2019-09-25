@@ -50,6 +50,7 @@
                   :else                  nil)
      :value     (if (= field-type :checkbox) nil
                     (or @value ""))
+     :placeholder (:placeholder options)
      :min       (:min options)
      :max       (:max options)
      :required  (:required options)
