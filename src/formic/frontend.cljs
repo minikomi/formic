@@ -48,7 +48,8 @@
                       (:fieldset classes))
                   :formic-error)
                  (:fieldset classes))}
-       [formic-compound-title f]
+       (when (:title f)
+         [formic-compound-title f])
        (when-not (and collapsable @collapsed)
          [:ul.formic-compound-fields
           {:class (:fields-list classes)}
