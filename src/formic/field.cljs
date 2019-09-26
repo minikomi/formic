@@ -156,9 +156,12 @@
 (defn gen-f-title
   "Generates a title for a field if none is set"
   [f]
-  (or (:title f)
-      (str/capitalize (formic-util/format-kw (:id f)))
-      (str/capitalize (formic-util/format-kw (:field-type f)))))
+  (cond
+    (false? (:title f)) false
+    (:title f) (:title f)
+    :else
+    (or (str/capitalize (formic-util/format-kw (:id f)))
+        (str/capitalize (formic-util/format-kw (:field-type f))))))
 
 (defn update-state!
   "Adding field to state atom.
@@ -185,7 +188,7 @@
                             default-value
                             (parser raw-initial-value))
         options           (merge
-                           (get-in schema [:options :fields (:field-type f)])
+                           (get-in schema [:options (:field-type f)])
                            (:options f))
         serializer        (or (:serializer f)
                               (get-in schema [:serializers (:field-type f)])
@@ -318,12 +321,13 @@
   "Adds field defined components, parsers, serializers, defaults
   into the main schema. Will respect previously defined versions
   to allow override."
-  [schema [field-type {:keys [component parser default serializer validation]}]]
+  [schema [field-type {:keys [component parser options default serializer validation]}]]
   (cond-> schema
     component  (update :components  formic-util/assoc-if-new field-type component)
     parser     (update :parsers     formic-util/assoc-if-new field-type parser)
     serializer (update :serializers formic-util/assoc-if-new field-type serializer)
     default    (update :defaults    formic-util/assoc-if-new field-type default)
+    options    (update :options    formic-util/assoc-if-new field-type options)
     ))
 
 (defn prepare-state

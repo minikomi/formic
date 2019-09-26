@@ -22,7 +22,8 @@
        {:class (formic-util/make-path-id f)}
        [wrapper-tag
         {:class (formic-util/conjv (:label classes) :formic-input-label)}
-        [:h5.formic-input-title {:class (:title classes)} title]
+        (when title
+          [:h5.formic-input-title {:class (:title classes)} title])
         body
         [error-label f]]])))
 
@@ -104,6 +105,10 @@
   [common-wrapper f
    [:select
     (make-attrs f)
+    (when (:placeholder options)
+      [:option {:disabled "disabled"
+                :value ""
+                :hidden "hidden"} (:placeholder options)])
     (doall
      (for [[key label] (:choices options)]
        ^{:key key}
