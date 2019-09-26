@@ -9,7 +9,7 @@
       [:h3 {:class classes} err])))
 
 (defn common-wrapper [f]
-  (fn [{:keys [title classes id field-type] :as f} body]
+  (fn [{:keys [title classes options id field-type] :as f} body]
     (let [wrapper-tag (if (#{:email
                              :string
                              :textarea
@@ -24,7 +24,11 @@
         {:class (formic-util/conjv (:label classes) :formic-input-label)}
         (when title
           [:h5.formic-input-title {:class (:title classes)} title])
+        (when (:pre-text options)
+          [:span.formic-pre-text (:pre-text options)])
         body
+        (when (:post-text options)
+          [:span.formic-post-text (:post-text options)])
         [error-label f]]])))
 
 (defn make-attrs [{:keys [field-type
