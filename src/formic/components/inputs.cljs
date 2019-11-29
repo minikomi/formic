@@ -25,10 +25,14 @@
         (when title
           [:h5.formic-input-title {:class (:title classes)} title])
         (when (:pre-text options)
-          [:span.formic-pre-text (:pre-text options)])
+          [:span.formic-pre-text
+           {:class (:post-text classes)}
+           (:pre-text options)])
         body
         (when (:post-text options)
-          [:span.formic-post-text (:post-text options)])
+          [:span.formic-post-text
+           {:class (:post-text classes)}
+           (:post-text options)])
         [error-label f]]])))
 
 (defn make-attrs [{:keys [field-type
@@ -156,8 +160,8 @@
          [:label
           {:class
            (conj (if is-selected
-                   (:label-active classes (:label classes))
-                   (:label classes))
+                   (:choice-label-active classes (:label classes))
+                   (:choice-label classes))
                  (str "key-" key-name))}
           [:input input-attrs] label]])))]])
 
@@ -193,8 +197,8 @@
         [:label
          {:class
           (if is-selected
-            (:label-active classes (:label classes))
-            (:label classes))}
+            (:choice-label-active classes (:label classes))
+            (:choice-label classes))}
          [:input input-attrs] label]]))]])
 
 (defn hidden [{:keys [value]}]
